@@ -685,6 +685,19 @@ perfect ordering by shortfall, since $\tau$ compresses the whole Hermite spectru
 one number, but the extremes behave as \cref{eq:main} requires. \Cref{app:class} gives
 the full breakdown.
 
+Individual assays show the pattern more sharply than the class medians. The
+SARS-CoV-2 spike receptor binding domain carries the most compressed upper tail in the
+benchmark, $\tau = 0.43$, and its forecast overstates the achievable gain by $1.08$,
+which is more than the whole gain available; estimating the conditional mean brings
+that to $0.09$. Yeast ubiquitin behaves the same way at $\tau = 0.50$, from $1.10$ to
+$0.01$. At the opposite end human ACE2, with the longest tail of the group at $\tau =
+1.86$, underpromises at $-0.06$. The instructive exception is GFP, where $\tau = 1.12$
+places it among the extended tails yet the gap is $+0.86$: it is also the smallest
+assay of the group, with $433$ usable variants, and the one the surrogate ranks worst,
+at $\rho = 0.12$, so its forecast error reflects a failed fit rather than tail shape.
+\Cref{tab:named} collects these cases.
+
+
 \subsection{Neither correction family recovers gain}
 \label{sec:results-fix}
 
@@ -977,6 +990,42 @@ binding            & 1.011 & 0.124 & 0.611 \\
 \end{tabular}
 \end{small}
 \end{center}
+\end{table}
+
+\subsection{Named assays across the tail range}
+\label{app:named}
+
+\Cref{tab:named} lists the assays discussed in \cref{sec:results-class}, ordered by
+$\tau$. The gap is normalized by the achievable gain, so a value above one means the
+forecast overstates by more than the entire gain available. Each row is the median over
+training fractions, seeds and budgets for that assay.
+
+\begin{table}[ht]
+\caption{Gap before and after conditional-mean recalibration for named assays, ordered
+by tail-compression index. The last two rows underpromise. GFP is the exception
+discussed in the text, where the surrogate ranks poorly rather than the tail being
+compressed.}
+\label{tab:named}
+\vskip 0.1in
+\begin{center}
+\begin{small}
+\begin{tabular}{llrrrrr}
+\toprule
+protein & assay & $\tau$ & reported & isotonic & $\rho$ & variants \\
+\midrule
+spike RBD  & binding    & 0.43 & $+1.08$ & $+0.09$ & 0.72 & 3802 \\
+ubiquitin  & fitness    & 0.50 & $+1.10$ & $+0.01$ & 0.68 & 1195 \\
+DHFR       & fitness    & 0.72 & $+0.85$ & $+0.61$ & 0.58 & 2918 \\
+PTEN       & activity   & 0.87 & $+0.36$ & $+0.13$ & 0.53 & 7260 \\
+p53        & fitness    & 0.88 & $+0.12$ & $+0.06$ & 0.66 & 7467 \\
+GFP        & expression & 1.12 & $+0.86$ & $+0.49$ & 0.12 & \phantom{0}433 \\
+MPL        & fitness    & 1.13 & $-0.06$ & $+0.09$ & 0.51 & \phantom{0}562 \\
+ACE2       & binding    & 1.86 & $-0.06$ & $+0.02$ & 0.56 & 2223 \\
+\bottomrule
+\end{tabular}
+\end{small}
+\end{center}
+\vskip -0.1in
 \end{table}
 
 \subsection{Effect of training fraction}

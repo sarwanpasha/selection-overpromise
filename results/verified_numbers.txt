@@ -27,3 +27,15 @@ probeG cell level (1650 cells, raw mean 0.4817): cap1 -0.07973/14.3/-203.0,
   cap2 -0.03213/20.1/-155.2, cap3 -0.01439/23.2/-113.4, half -0.02203/21.0/-136.1.
 Manuscript corrections from this pass: 687->607 cells, 61->81 cells, 0.268->0.261,
   0.53->0.54, partial -0.177->-0.135 (p 8e-4), lcb 46.6->46.5, 203->205 assays.
+
+Named-assay table (median over fracs, seeds, budgets; verified in word encoding):
+protein    tau   reported  isotonic  rho   variants
+spike RBD  0.43  +1.08     +0.09     0.72  3802
+ubiquitin  0.50  +1.10     +0.01     0.68  1195
+DHFR       0.72  +0.85     +0.61     0.58  2918
+PTEN       0.87  +0.36     +0.13     0.53  7260
+p53        0.88  +0.12     +0.06     0.66  7467
+GFP        1.12  +0.86     +0.49     0.12   433   <- exception: rho 0.12, smallest n
+MPL        1.13  -0.06     +0.09     0.51   562
+ACE2       1.86  -0.06     +0.02     0.56  2223
+Source: vig.csv on alina (per-assay medians from probeH.csv), joined to ref.csv.
