@@ -78,8 +78,9 @@ accuracies from $0.5$ to $0.9$, and that a one-line statistic of the fitness
 distribution predicts the gap and its reversal, with the fraction of underpromising
 assays rising from $0\%$ to $42\%$ as the tail lengthens. The diagnosis is
 constructive: estimating the conditional mean by isotonic regression on held-out data
-removes most of the gap, cutting the median absolute error from $0.289$ to $0.038$,
-while leaving the selected batch and therefore the realized gain untouched.
+cuts the mean absolute gap from $0.251$ to $0.108$ and the median gap from $0.173$ to
+$0.063$, winning on $76\%$ of assay and budget combinations, while leaving the selected
+batch and therefore the realized gain untouched.
 \end{abstract}
 
 \section{Introduction}
@@ -288,7 +289,11 @@ We model the fitness distribution through its quantile transform. Let $z \sim
 so that $G_{\!f} = F_y^{-1} \circ \Phi$ where $F_y$ is the fitness distribution function
 and $\Phi$ is the standard normal distribution function. Any continuous fitness
 distribution admits this representation, and $G_{\!f}$ is linear exactly when fitness is
-Gaussian. Expand $G_{\!f}$ in probabilists' Hermite polynomials $\He_k$,
+Gaussian. We assume throughout that fitness has finite variance, so that $G_{\!f} \in
+L^2(\varphi)$ where $\varphi$ is the standard normal density. The Hermite polynomials
+form a complete orthogonal basis of that space, so the expansion below converges in
+$L^2(\varphi)$ and the termwise conditioning used in the proof is justified by
+dominated convergence. Expand $G_{\!f}$ in probabilists' Hermite polynomials $\He_k$,
 \begin{equation}
 G_{\!f}(z) = \sum_{k \ge 0} \frac{c_k}{k!}\, \He_k(z),
 \qquad c_k = \Exp\!\left[G_{\!f}(z)\,\He_k(z)\right],
@@ -308,6 +313,28 @@ surrogate. A fitted model does not output $u$ but a prediction on the scale of $
 take the least squares fit of $y$ on $u$, which gives $\yhat = \Exp[y] + \rho_\star c_1
 u$. This is the calibrated prediction in the strongest sense available without
 knowledge of $G_{\!f}$: it is unbiased for $y$ on the full population.
+
+The latent accuracy $\rho_\star$ is not the quantity benchmarks publish, but the two are
+linked exactly.
+
+\begin{lemma}[Latent accuracy from reported rank accuracy]
+\label{lem:rho}
+Since $y$ and $\yhat$ are strictly increasing transforms of $z$ and $u$ respectively,
+and $(z,u)$ is bivariate normal with correlation $\rho_\star$, the Spearman correlation
+between $\yhat$ and $y$ is
+\begin{equation}
+\rho \;=\; \frac{6}{\pi}\,\arcsin\!\left(\frac{\rho_\star}{2}\right),
+\qquad\text{so}\qquad
+\rho_\star \;=\; 2\sin\!\left(\frac{\pi\rho}{6}\right).
+\label{eq:rholink}
+\end{equation}
+\end{lemma}
+
+Spearman correlation is invariant to strictly increasing transforms of either argument,
+so it may be computed on $(z,u)$ directly, where it is the classical Gaussian value.
+\Cref{lem:rho} is what allows the theory to be evaluated at an accuracy a practitioner
+can read off a leaderboard: the median held-out accuracy in our experiments,
+$\rho = 0.691$, corresponds to $\rho_\star = 0.708$.
 
 Selecting the top $q$ fraction by $\yhat$ is the same as selecting $u > z_q$ with $z_q =
 \Phi^{-1}(1-q)$. Write $R$ for the random variable $u$ conditioned on $u > z_q$, a
@@ -704,6 +731,57 @@ rule & median $\Delta$ & wins & $p$ \\
 \end{center}
 \vskip -0.1in
 \end{table}
+
+\subsection{Estimating the conditional mean repairs the forecast}
+\label{sec:results-condmean}
+
+\Cref{prop:tower} says the gap would vanish if the reported value were the conditional
+mean, so the direct test is to estimate that conditional mean and see whether it does.
+We fit three estimators of $m(\yhat)$ on a held-out slice of the training data only:
+isotonic regression, a binned conditional mean, and Efron's Tweedie correction
+\citep{efron2011tweedie}. Isotonic and binned are monotone, so by
+\cref{cor:monotone} they leave the batch and the realized gain exactly as they were and
+alter only the number attached to it.
+
+\Cref{tab:condmean} reports the outcome over $202$ assays and $1509$ assay and budget
+combinations. Isotonic regression cuts the mean absolute gap from $0.251$ to $0.108$
+and the median gap from $0.173$ to $0.063$, improving on the reported score in $75.7\%$
+of combinations. The binned estimator also improves on the mean absolute gap but
+overshoots in the other direction, leaving a median gap of $-0.078$ and underpromising
+in $85\%$ of combinations, because equal-count bins place too few points in the tail
+that selection actually draws from. The Tweedie correction fails outright here, with a
+mean absolute gap of $5.69$, since the empirical Bayes score is estimated from a
+marginal density that is poorly resolved in the same tail.
+
+\begin{table}[t]
+\caption{Conditional-mean estimators against the reported score, over $202$ assays.
+The gap is normalized by the achievable gain. Win rate and $p$ compare absolute gaps
+against the reported score by a paired Wilcoxon signed-rank test.}
+\label{tab:condmean}
+\vskip 0.1in
+\begin{center}
+\begin{small}
+\begin{tabular}{lrrrr}
+\toprule
+rule & median & mean $|\cdot|$ & win & $p$ \\
+\midrule
+reported score & $0.173$ & $0.251$ & --- & --- \\
+isotonic       & $0.063$ & $0.108$ & $75.7\%$ & $10^{-120}$ \\
+binned         & $-0.078$ & $0.170$ & $62.3\%$ & $10^{-21}$ \\
+Tweedie        & $-1.338$ & $5.690$ & $1.6\%$ & $10^{-246}$ \\
+\bottomrule
+\end{tabular}
+\end{small}
+\end{center}
+\vskip -0.1in
+\end{table}
+
+Because Tweedie need not be monotone, it can also be used to reorder candidates, which
+tests whether a conditional-mean score picks a better batch rather than merely
+describing one. It does not. Using it to select moves realized gain by a median of
+$-0.647$ and wins in $0.3\%$ of combinations, which is the behavior
+\cref{cor:monotone} leads one to expect of any rule that perturbs an ordering without
+adding information.
 
 \section{Discussion}
 \label{sec:discussion}

@@ -1,0 +1,18 @@
+probeH, all ProteinGym DMS substitution assays. Letter-decoded, verified.
+TOTAL_ROWS=7590  CELLS=1509  ASSAYS=202
+
+rule    median_s   meanabs_s   overpromise%   win_vs_raw%   log10 p
+raw     0.1727     0.2505      88.7           -             -
+iso     0.0634     0.1075      82.4           75.7          -120.4
+bin    -0.0780     0.1701      15.3           62.3          -21.4
+tweed  -1.3378     5.6895       0.1            1.6          -245.8
+
+Tweedie as a SELECTION rule:
+  delta_median = -0.64695   winpct = 0.3   log10p = -246.02   identical = 2.7%
+
+Headline: isotonic conditional-mean recalibration cuts mean absolute gap
+0.2505 -> 0.1075 (2.33x) and median gap 0.1727 -> 0.0634 (2.7x), winning
+75.7% of cells at p ~ 1e-120. Beats binned and Tweedie decisively.
+
+NOTE: supersedes the abstract's "0.289 to 0.038", which came from an earlier
+synthetic run and must be replaced with 0.251 -> 0.108.
