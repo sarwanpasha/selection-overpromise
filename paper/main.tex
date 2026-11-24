@@ -37,12 +37,12 @@
 \newcommand{\He}{\mathrm{He}}
 \newcommand{\Normal}{\mathcal{N}}
 
-\icmltitlerunning{Selection Bias Explains Overpromise in Model-Guided Design}
+\icmltitlerunning{The Misspecification Gap in Model-Guided Design}
 
 \begin{document}
 
 \twocolumn[
-\icmltitle{Selection Bias Explains Overpromise in Model-Guided Design}
+\icmltitle{The Misspecification Gap in Model-Guided Design}
 
 \begin{icmlauthorlist}
 \icmlauthor{Anonymous Authors}{anon}
@@ -51,7 +51,7 @@
 \icmlaffiliation{anon}{Anonymous Institution}
 \icmlcorrespondingauthor{Anonymous Authors}{anon@example.com}
 
-\icmlkeywords{selection bias, model-guided design, protein fitness, calibration}
+\icmlkeywords{model misspecification, model-guided design, protein fitness, calibration}
 
 \vskip 0.3in
 ]
@@ -62,21 +62,24 @@
 Model-guided design trains a surrogate on measured data, ranks a large candidate
 library by predicted value, and sends the top $K$ candidates to the next round of
 experiments. The predicted value of that batch is routinely treated as a forecast of
-what the batch will deliver. We show that this forecast is biased upward even when
-the surrogate is correctly calibrated on the population, and we derive the bias in
-closed form. Writing the fitness distribution as a monotone transform $G$ of a
-standard Gaussian variable, the expected gap between predicted and realized gain
-depends only on the nonlinear Hermite components of $G$, so the bias vanishes exactly
-when fitness is Gaussian and persists at full strength when the surrogate ranks
-candidates perfectly. The theory predicts that the bias grows as the upper tail of
-the fitness distribution is compressed and reverses sign when that tail is long. On
-$217$ deep mutational scanning assays we find that $93\%$ of assays overpromise, that
-the gap holds near $23\%$ of the achievable gain across surrogate accuracies from
-$0.5$ to $0.9$, and that a one-line statistic of the fitness distribution predicts the
-gap and its reversal, with the fraction of underpromising assays rising from $0\%$ to
-$42\%$ as the tail lengthens. The same theory implies that no post hoc recalibration of
-the surrogate can recover the lost gain, which we confirm against two correction
-families.
+what the batch will deliver, and it is routinely too high. We show that this gap is
+not a consequence of selection as such. A surrogate that reports the conditional mean
+of fitness given its own score is unbiased on any selected subset, however extreme the
+selection, by the tower property. The gap instead measures how far the reported score
+is from that conditional mean, so it is a misspecification gap, and we derive it in
+closed form. Writing the fitness distribution as a monotone transform $G$ of a standard
+Gaussian variable, the gap depends only on the nonlinear Hermite components of $G$, so
+it vanishes exactly when fitness is Gaussian and persists at full strength when the
+surrogate ranks candidates perfectly. The theory predicts that the gap grows as the
+upper tail of the fitness distribution is compressed and reverses sign when that tail
+is long. On $217$ deep mutational scanning assays we find that $93\%$ of assays
+overpromise, that the gap holds near $23\%$ of the achievable gain across surrogate
+accuracies from $0.5$ to $0.9$, and that a one-line statistic of the fitness
+distribution predicts the gap and its reversal, with the fraction of underpromising
+assays rising from $0\%$ to $42\%$ as the tail lengthens. The diagnosis is
+constructive: estimating the conditional mean by isotonic regression on held-out data
+removes most of the gap, cutting the median absolute error from $0.289$ to $0.038$,
+while leaving the selected batch and therefore the realized gain untouched.
 \end{abstract}
 
 \section{Introduction}
@@ -107,22 +110,31 @@ noisy when the model was simply optimistic. A natural assumption is that this ga
 symptom of a weak surrogate and that it closes as models improve.
 
 We show that this assumption is wrong, and that the gap has a specific and predictable
-structure. The source is not model error in the usual sense but the interaction
-between selection and the shape of the fitness distribution. Selecting the top $K$
-candidates by predicted value conditions on a region where prediction error is
-systematically positive, and the magnitude of the resulting bias is governed by how the
-fitness distribution departs from Gaussian in its upper tail. Because the mechanism is
-distributional rather than a deficiency of the fit, improving the surrogate does not
-remove it.
+structure. It is tempting to attribute the gap to selection itself, on the reasoning
+that choosing the highest scoring candidates conditions on a region where prediction
+error happens to be positive. That reasoning does not survive contact with the tower
+property. If the reported score is the conditional mean of fitness given the
+surrogate's own output, then the expected gap on any selected subset is exactly zero,
+no matter how extreme the selection. Selection alone therefore cannot produce a gap.
 
-This matters because the correction most practitioners would reach for cannot work.
-Recalibrating a surrogate rescales its predictions, and any rescaling that preserves
-order leaves the selected batch unchanged. A calibrated model can therefore report an
-honest forecast while still selecting exactly the same candidates and delivering
-exactly the same gain. Separating the quality of the forecast from the quality of the
-selection is what allows the bias to be diagnosed and budgeted for in advance, and our
-results give a statistic that does this from the measured fitness values alone, before
-any model is fit.
+What produces it is the discrepancy between the quantity a team reports and the
+conditional mean it is taken to be. Surrogates are tuned and benchmarked for rank
+accuracy, and their outputs are standardized to the scale of the training fitness
+values rather than regressed onto it, so the reported score carries the right ordering
+and the wrong magnitude. The gap measures exactly that discrepancy, which is why we
+call it a misspecification gap. Its size is governed by how far the fitness
+distribution departs from Gaussian in its upper tail, so it is a property of the assay
+rather than a deficiency of the fit, and improving rank accuracy does not remove it.
+
+Reading the gap this way turns a diagnosis into a remedy. Because the gap is the
+distance between the reported score and a conditional mean, estimating that conditional
+mean closes it. Any strictly increasing map from score to forecast leaves the ranking,
+and therefore the selected batch and the realized gain, exactly as they were, so the
+forecast can be repaired without disturbing the design. We estimate the conditional
+mean by isotonic regression on held-out data and recover most of the gap. Separating
+the quality of the forecast from the quality of the selection is what makes this
+possible, and our tail statistic predicts in advance, from the measured fitness values
+alone and before any model is fit, how large the uncorrected gap will be.
 
 Our contributions are as follows.
 
@@ -188,7 +200,14 @@ proposes the next batch from its predictions \citep{yang2019machine, wu2019machi
 biswas2021low}. Practical systems differ in how they balance exploitation against
 exploration \citep{hie2022adaptive, brookes2019conditioning, stanton2022accelerating}, how they construct libraries
 \citep{sinai2020adalead}, and how they handle batches
-\citep{angermueller2020modelbased}. A recurring observation is that candidates
+\citep{angermueller2020modelbased}. The same loop is studied without the wet lab as
+offline model-based optimization, where a fixed dataset must be turned into designs and
+the surrogate is known to be unreliable away from the data it was fit on
+\citep{trabucco2021coms, fannjiang2020autofocused}, and where a standard benchmark now
+exists \citep{trabucco2022designbench}. Those methods act on the ordering, by holding
+the surrogate down on out-of-distribution inputs or by refitting it as the search moves;
+the gap we study survives any such change because it concerns the number attached to the
+batch rather than the batch itself. A recurring observation is that candidates
 predicted to be strong can differ substantially from those that measure strongly, and
 that quantifying uncertainty for designed candidates has to account for the feedback
 loop that produced them \citep{hsu2022learning, fannjiang2022conformal}. Our results explain part of that
@@ -203,7 +222,10 @@ forde2023review}. Related corrections appear in expression quantitative trait an
 \citep{huang2018bootstrapqtl} and in Mendelian randomization
 \citep{sadreev2021empirical}. Directed evolution has its own version, where variant
 scores estimated from sequencing counts are biased upward for top ranked variants
-\citep{nemoto2023acides}. Selective inference provides general machinery for
+\citep{nemoto2023acides}. The empirical Bayes remedy is Tweedie's formula, which
+corrects a selected estimate by the local derivative of the log marginal density and
+which \citet{efron2011tweedie} develops precisely as a treatment for selection bias.
+Selective inference provides general machinery for
 conditioning on a selection event \citep{benjamini2005false, taylor2015statistical,
 tibshirani2016exact, fithian2014optimal}. These treatments share a Gaussian or
 exponential-family assumption on the quantity being selected. The contribution here is
@@ -221,7 +243,7 @@ angelopoulos2023conformal}. Calibration is usually evaluated on the marginal
 distribution of predictions rather than on the selected subset, and
 \cref{sec:results} shows why that distinction matters here.
 
-\section{Overpromise Under Selection}
+\section{The Misspecification Gap}
 \label{sec:method}
 
 \subsection{Setup and notation}
@@ -290,6 +312,35 @@ knowledge of $G_{\!f}$: it is unbiased for $y$ on the full population.
 Selecting the top $q$ fraction by $\yhat$ is the same as selecting $u > z_q$ with $z_q =
 \Phi^{-1}(1-q)$. Write $R$ for the random variable $u$ conditioned on $u > z_q$, a
 truncated standard normal.
+
+Before stating the result it is worth isolating what selection does and does not do.
+
+\begin{proposition}[Selection alone is unbiased]
+\label{prop:tower}
+Let $m(\yhat) = \Exp[y \mid \yhat]$ and suppose the reported value of each candidate is
+$m(\yhat)$. Then for any selection rule $\mathcal{S}$ that depends on the candidates
+only through $\yhat$,
+\begin{equation}
+\Exp\!\left[\,\tfrac{1}{K}\textstyle\sum_{i \in \mathcal{S}}\big(m(\yhat_i) - y_i\big)\,\right] = 0 .
+\label{eq:tower}
+\end{equation}
+\end{proposition}
+
+\begin{proof}
+The event $\{i \in \mathcal{S}\}$ is measurable with respect to the scores, so
+conditioning on them and applying the tower property gives
+$\Exp[y_i \mid \yhat_i,\, i \in \mathcal{S}] = \Exp[y_i \mid \yhat_i] = m(\yhat_i)$.
+Each summand therefore has zero conditional expectation, and averaging preserves this.
+\end{proof}
+
+\Cref{prop:tower} holds for every selection fraction, including arbitrarily extreme
+ones, so conditioning on a high-scoring region cannot by itself create a gap. The gap
+observed in practice must therefore come from the reported value differing from
+$m(\yhat)$. Surrogates are fit and benchmarked for rank accuracy and their outputs are
+placed on the scale of the training fitness values by an affine map, which is the
+conditional mean only when that conditional mean happens to be affine. The quantity
+\cref{eq:main} below measures exactly this discrepancy, and we refer to it as the
+misspecification gap.
 
 \begin{theorem}[Shortfall under top-$q$ selection]
 \label{thm:main}
