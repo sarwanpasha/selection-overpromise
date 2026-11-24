@@ -677,14 +677,13 @@ $\ge 1.40$     & 59  & $+0.019$ & 0.53 & 42\% \\
 \subsection{The pattern across assay types}
 \label{sec:results-class}
 
-Grouping assays by their functional label gives the same picture in biological terms.
-Binding assays have an upper tail that is close to Gaussian, with median $\tau = 1.011$,
-and the smallest shortfall at $0.124$. Expression assays are compressed, with $\tau =
-0.843$, and carry the largest shortfall at $0.325$. Activity, organismal fitness, and
-stability fall between, with $\tau$ of $0.828$, $0.826$, and $0.726$ and shortfalls of
-$0.242$, $0.167$, and $0.235$. The ordering by $\tau$ is not a perfect ordering by
-shortfall, which is expected because $\tau$ compresses the whole Hermite spectrum into
-one number, but the extremes behave as \cref{eq:main} requires.
+Grouping assays by functional label gives the same picture in biological terms.
+Binding assays are closest to Gaussian, with median $\tau = 1.011$, and carry the
+smallest shortfall at $0.124$, while expression assays are the most compressed, at
+$\tau = 0.843$, and the worst affected, at $0.325$. The ordering by $\tau$ is not a
+perfect ordering by shortfall, since $\tau$ compresses the whole Hermite spectrum into
+one number, but the extremes behave as \cref{eq:main} requires. \Cref{app:class} gives
+the full breakdown.
 
 \subsection{Neither correction family recovers gain}
 \label{sec:results-fix}
@@ -731,6 +730,68 @@ rule & median $\Delta$ & wins & $p$ \\
 \end{center}
 \vskip -0.1in
 \end{table}
+
+\subsection{Simulation confirms the theory and validates the statistic}
+\label{sec:results-synth}
+
+Real assays cannot test the theory's null, because no assay is exactly Gaussian. We
+therefore sweep fitness shape directly, drawing $y = \sinh(\operatorname{arcsinh}(z) /
+\delta)$ for $\delta$ from $0.6$ to $3.0$, which moves the upper tail from extended to
+compressed, at accuracies $\rho$ from $0.5$ to $0.9$. \Cref{fig:synth} shows the
+result. The gap crosses zero at $\tau = 1$, as \cref{cor:gaussian} requires, and
+reverses sign on either side, running from $-0.125$ at $\tau = 1.59$ to $+0.129$ at
+$\tau = 0.75$. It also grows with accuracy rather than shrinking, from $0.049$ at
+$\rho = 0.5$ to $0.151$ at $\rho = 0.9$, which is \cref{cor:saturation} in numbers:
+a better surrogate overpromises more, not less.
+
+To check that $\tau$ is not an artifact of this one family we repeat the measurement on
+twelve unrelated distributions, among them lognormal, gamma, Student's $t$, uniform,
+beta, bimodal, and a hard upper ceiling. Across them the rank correlation between
+$\tau$ and the median gap is $-0.909$ at $p = 4.2 \times 10^{-5}$. The ceiling is the
+extreme case and the one most relevant to saturating assays: there the forecast
+overstates by $1.10$, more than the entire achievable gain.
+
+The practical claim is prospective, so we test it that way. Fitting a rule for the gap
+on eleven distributions and predicting the twelfth, a free linear rule in $\log \tau$
+and $\rho$ beats a pooled mean ($p = 0.009$) but not the assumption of no gap
+($p = 0.13$), and every failure sits at $\tau$ near one. \Cref{cor:gaussian} says the
+gap is exactly zero there, so imposing that by dropping the intercept is a constraint
+taken from the theory rather than a parameter fitted to the data. The anchored rule
+then beats assuming no gap on ten of twelve held-out shapes at $p = 0.005$, with mean
+absolute error lower by a factor of $1.70$, and repairs the Gaussian case the free rule
+got wrong; bimodal and lognormal remain ties. A team can therefore compute $\tau$ on a
+new assay, before fitting any model, and forecast the gap better than by trusting the
+surrogate.
+
+\begin{figure}[t]
+\vskip 0.1in
+\begin{center}
+\begin{tikzpicture}
+\begin{axis}[
+  width=0.95\columnwidth, height=4.6cm,
+  xlabel={$\tau$}, ylabel={gap / ceiling},
+  label style={font=\small}, tick label style={font=\small},
+  legend style={font=\small, draw=none, at={(0.97,0.95)}, anchor=north east},
+  axis lines=left, xmin=0.68, xmax=1.68, ymin=-0.16, ymax=0.17,
+]
+\addplot[black!45, dashed, forget plot] coordinates {(0.68,0) (1.68,0)};
+\addplot[mark=*, thick, color=red!65!black] coordinates {
+  (0.747,0.1292) (0.777,0.1140) (0.817,0.0850) (0.882,0.0565)
+  (0.999,-0.0025) (1.176,-0.0592) (1.595,-0.1249)};
+\addlegendentry{reported score}
+\addplot[mark=square*, thick, color=blue!60!black] coordinates {
+  (0.747,0.0088) (0.777,0.0216) (0.817,0.0147) (0.882,0.0279)
+  (0.999,0.0281) (1.176,0.0279) (1.595,0.0286)};
+\addlegendentry{conditional mean}
+\end{axis}
+\end{tikzpicture}
+\end{center}
+\caption{Median gap against the tail-compression index over the shape sweep. The
+reported score crosses zero at $\tau = 1$ and reverses sign, while the estimated
+conditional mean stays near zero throughout.}
+\label{fig:synth}
+\vskip -0.15in
+\end{figure}
 
 \subsection{Estimating the conditional mean repairs the forecast}
 \label{sec:results-condmean}
@@ -934,6 +995,78 @@ The baseline concentrates its batch on few positions. At batch sizes $K = 10$, $
 and $50$ it uses a median of $5$, $9$, and $17$ distinct positions. The capping rules
 raise this by construction, with \textsc{cap}$1$ reaching $K$ distinct positions by
 definition, and \cref{tab:fix} reports the cost.
+
+\subsection{Simulation protocol}
+\label{app:sim-protocol}
+
+Each cell draws $20{,}000$ candidates, holds out $30\%$ as a calibration slice, fits
+the linear calibration and the conditional-mean estimators on that slice only, and
+selects the top $K \in \{10, 20, 50\}$ by the reported score on the remainder. Gains
+are taken relative to the median of the calibration slice, exactly as on real assays.
+The shape sweep uses the sinh-arcsinh family with $\delta \in \{0.6, 0.8, 1.0, 1.3,
+1.7, 2.2, 3.0\}$ and $20$ seeds per cell, giving $2{,}100$ cells. The heterogeneous
+study replaces that family with twelve fixed distributions obtained by applying their
+quantile functions to $\Phi(z)$, with $15$ seeds per cell.
+
+\subsection{Tail-compression index across unrelated distributions}
+\label{app:shapes}
+
+\Cref{tab:shapes} gives the per-distribution medians behind the rank correlation of
+$-0.909$ quoted in \cref{sec:results-synth}. The Gaussian row is the control and sits
+at $-0.008$, and the truncated row is the saturating case.
+
+\begin{table}[h]
+\caption{Median tail-compression index and median normalized gap for the reported
+score and for isotonic recalibration, by distribution.}
+\label{tab:shapes}
+\vskip 0.1in
+\begin{center}
+\begin{small}
+\begin{tabular}{lrrr}
+\toprule
+distribution & $\tau$ & reported & isotonic \\
+\midrule
+truncated upper & $0.343$ & $1.101$ & $0.026$ \\
+inverse square root & $0.532$ & $0.271$ & $0.051$ \\
+uniform & $0.567$ & $0.351$ & $0.039$ \\
+beta$(5,2)$ & $0.665$ & $0.427$ & $0.038$ \\
+bimodal & $0.995$ & $0.436$ & $0.082$ \\
+Gaussian & $0.998$ & $-0.008$ & $0.072$ \\
+beta$(2,5)$ & $1.018$ & $-0.079$ & $0.067$ \\
+logistic & $1.211$ & $-0.085$ & $0.077$ \\
+gamma$(2)$ & $1.412$ & $-0.205$ & $0.085$ \\
+exponential & $1.629$ & $-0.266$ & $0.085$ \\
+Student $t_3$ & $1.710$ & $-0.187$ & $0.115$ \\
+lognormal & $2.216$ & $-0.277$ & $0.095$ \\
+\bottomrule
+\end{tabular}
+\end{small}
+\end{center}
+\vskip -0.1in
+\end{table}
+
+\subsection{Shrinking the conditional-mean estimator}
+\label{app:shrink}
+
+Isotonic regression is nonparametric and therefore noisy when the score carries little
+signal: in simulation it loses to the linear calibration below $\rho = 0.7$, with mean
+absolute gap $0.080$ against $0.049$ at $\rho = 0.5$. A convex weight $w$ between the
+linear and isotonic fits, chosen by five-fold cross-validation inside the calibration
+slice, removes that failure. Because a convex combination of two increasing maps is
+increasing, the ranking and therefore the batch are unchanged, which we verified on
+every cell.
+
+The weight must be chosen on the region that is actually selected. Minimizing overall
+squared error shrinks too far on severely misspecified shapes, giving $0.178$ against
+isotonic's $0.026$ under a hard ceiling. Restricting the cross-validation objective to
+the top $1\%$ of scores fixes this and yields the lowest mean absolute gap of any rule
+we tried, $0.066$ against $0.069$ for isotonic and $0.320$ for the reported score, with
+a median gap of zero to four decimal places. The learned weight is interpretable,
+rising from $0.24$ under Gaussian fitness, where \cref{cor:gaussian} says there is
+nothing to correct, to $1.00$ under a hard ceiling. Against isotonic the difference is
+not significant cell by cell ($p = 0.22$); the gain is in avoiding large errors rather
+than in winning more often. We report this variant in simulation only. The real-assay
+results in \cref{sec:results-condmean} use plain isotonic regression.
 
 \subsection{Full theory and simulation comparison}
 \label{app:fulltheory}
