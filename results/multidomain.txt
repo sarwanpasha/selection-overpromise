@@ -1,0 +1,31 @@
+probeJ, multi-domain generalization. 105 cells (domain x frac x K, median over 10 seeds).
+Grid: fracs 0.1/0.2/0.3/0.45/0.6, K 5/10/20/50/100, 10 seeds.
+Identical pipeline to ProteinGym: ridge surrogate, top-K by predicted value, gap over ceiling.
+
+domain                    n   tau    raw_med  raw_mab  iso_med  iso_mab  rho
+materials-superconductor  25  0.682  +0.1138  0.0969   0.1336   0.1199   0.839
+molecules-solubility      20  0.893  +0.1758  0.1556   0.0580   0.1043   0.826
+peptides-amp-ecoli        25  0.966  +1.2783  1.2704   0.1436   0.1375   0.403
+molecules-aquatox         15  1.222  +0.0090  0.1139   0.0760   0.0950   0.673
+molecules-fishtox         20  1.317  +0.0464  0.0707   0.0196   0.0656   0.778
+ALL                      105         ---      0.3849   ---      0.1072   win 63.8%, log10p -4.7
+
+Headlines:
+- Every domain overpromises: median raw gap positive in all five.
+- Isotonic cuts pooled mean absolute gap 0.385 -> 0.107 (3.6x), p ~ 2e-5.
+- Peptides is the extreme: +1.28 raw (overstates by more than the whole achievable
+  gain) -> +0.14 after recalibration, a 9.2x reduction in mean absolute gap.
+- Isotonic helps in 4 of 5 domains; it hurts on superconductors (0.097 -> 0.120),
+  which has the highest surrogate accuracy (rho 0.839) and an already-small gap.
+- Across only five domains the tau-to-gap ordering is NOT monotone: tau 0.682 gives
+  a smaller gap than tau 0.893 and 0.966. The sign pattern holds (the two
+  extended-tail domains have near-zero gaps) but magnitude does not rank cleanly.
+
+Data sources (all fetched on alina, which has outbound network):
+  superconductor  UCI 464 superconductivty+data.zip -> train.csv, target critical_temp
+  fishtox         UCI 504 qsar+fish+toxicity.zip (semicolon, headerless)
+  aquatox         UCI 505 qsar+aquatic+toxicity.zip (semicolon, headerless)
+  solubility      deepchem delaney-processed.csv, 6 physical descriptors only;
+                  the "ESOL predicted log solubility" column is EXCLUDED as leakage
+  peptides        GRAMPA (Witten & Witten 2019) grampa.csv, E. coli rows, median
+                  log MIC per sequence, negated so higher = more active, 2-mer counts
