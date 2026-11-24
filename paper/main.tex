@@ -505,7 +505,7 @@ We use the ProteinGym substitution benchmark, version $1.3$, which contains $217
 mutational scanning assays \citep{notin2023proteingym}. Each assay provides a set of
 single amino acid substitutions of one protein together with a measured fitness score.
 We keep single substitutions, discard rows whose fitness is missing or not finite, and
-require at least $200$ usable variants, which leaves $203$ assays for the selection
+require at least $200$ usable variants, which leaves $205$ assays for the selection
 experiments. Assays with more than $20{,}000$ variants are subsampled to $20{,}000$ at a
 fixed seed to bound computation. Every assay carries a coarse functional label in the
 benchmark metadata, one of activity, binding, expression, organismal fitness, or
@@ -591,7 +591,7 @@ reproduces \cref{cor:gaussian} to simulation precision.
 \subsection{Surrogates overpromise on real assays}
 \label{sec:results-gap}
 
-Across the $203$ assays, $93\%$ of assay and training-fraction combinations have a
+Across the $205$ assays, $93\%$ of assay and training-fraction combinations have a
 positive shortfall. The median predicted gain is $1.091$ against a median realized gain
 of $0.748$, so the median shortfall is $0.303$ and the median fraction of the ceiling
 captured is $0.578$. The median held-out Spearman correlation is $0.691$, which is
@@ -636,11 +636,11 @@ $0.9$--$1.0$ & 10  & 0.149 & 0.23 \\
 
 \Cref{eq:main} attributes the shortfall to nonlinearity of the fitness quantile
 transform, and \cref{eq:tau} summarizes the relevant nonlinearity in one number. Across
-$687$ assay and training-fraction cells covering $204$ assays, the Spearman correlation
+$607$ assay and training-fraction cells covering $204$ assays, the Spearman correlation
 between $\tau$ and the normalized shortfall is $-0.470$ with $p = 9.9 \times 10^{-35}$.
 Because $\tau$ and surrogate accuracy are themselves related, we also remove $\rho$
 from both variables by linear regression and correlate the residuals, which gives
-$-0.177$ with $p = 1.2 \times 10^{-5}$. The association is not a restatement of model
+$-0.135$ with $p = 8 \times 10^{-4}$. The association is not a restatement of model
 quality.
 
 \Cref{tab:tau} shows the relationship directly. The shortfall falls monotonically as
@@ -663,10 +663,10 @@ $\tau$ & cells & $s$ & $\rho$ & underpromise \\
 \midrule
 $<0.60$        & 115 & $+0.298$ & 0.78 & \phantom{0}3\% \\
 $0.60$--$0.75$ & 158 & $+0.265$ & 0.75 & \phantom{0}2\% \\
-$0.75$--$0.90$ & 113 & $+0.268$ & 0.67 & \phantom{0}0\% \\
+$0.75$--$0.90$ & 113 & $+0.261$ & 0.67 & \phantom{0}0\% \\
 $0.90$--$1.05$ & 81  & $+0.191$ & 0.63 & \phantom{0}4\% \\
-$1.05$--$1.40$ & 61  & $+0.129$ & 0.62 & 12\% \\
-$\ge 1.40$     & 59  & $+0.019$ & 0.53 & 42\% \\
+$1.05$--$1.40$ & 81  & $+0.129$ & 0.62 & 12\% \\
+$\ge 1.40$     & 59  & $+0.019$ & 0.54 & 42\% \\
 \bottomrule
 \end{tabular}
 \end{small}
@@ -717,7 +717,7 @@ use different numbers of usable pairs.}
 rule & median $\Delta$ & wins & $p$ \\
 \midrule
 \textsc{cal}    & $-0.0022$ & 44.3\% & $3{\times}10^{-5}$ \\
-\textsc{lcb}    & $+0.0000$ & 46.6\% & $2{\times}10^{-11}$ \\
+\textsc{lcb}    & $+0.0000$ & 46.5\% & $2{\times}10^{-11}$ \\
 \textsc{shrink} & $+0.0018$ & 56.0\% & $5{\times}10^{-14}$ \\
 \midrule
 \textsc{cap}1   & $-0.0797$ & 14.3\% & $10^{-203}$ \\

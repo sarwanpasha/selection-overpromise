@@ -10,3 +10,20 @@ SHRT vs ISO win 28.3, log10p -35.0; W_ALL 0.3354, W_TAIL 0.5000
 Tweedie as selection: median -0.6367, win 0.5, log10p -244.4
 NOTE: letter encoding (QABCDEFGHJ) produced glyph confusions (G/Q, B/E, H/B) at this
 screen resolution. Word encoding is the protocol from here on.
+
+Second pass, all word-encoded, recomputed from the CSVs on alina:
+probeC (610 cells, 205 assays; 607/204 after ceiling filter): 92.8% positive; medians
+  predicted 1.091, realized 0.748, shortfall 0.303, captured 0.578, rho 0.691.
+  By rho (n, s, median overlap): 20/.053/.01, 93/.167/.02, 81/.260/.07, 124/.241/.08,
+  169/.215/.12, 110/.243/.14, 10/.149/.23.
+tau strata (n, s, rho, neg%): 115/.2977/.78/2.6, 158/.2646/.75/1.9, 113/.2605/.67/0.0,
+  81/.1909/.63/3.7, 81/.1295/.62/12.3, 59/.0191/.54/42.4. corr -0.4703, log10p -34.0.
+  Partial (Pearson of residuals after regressing out rho): -0.135, log10p -3.1.
+Classes (cells, tau, s, rho): activity 118/.828/.242/.60, binding 36/1.011/.124/.61,
+  expression 46/.843/.325/.63, organismal 209/.826/.167/.62, stability 198/.726/.235/.79.
+probeE cell level (1509 cells, raw mean 0.4520): cal -0.00218/44.3/-4.5,
+  lcb 0.00000/46.5/-10.8, shrink +0.00178/56.0/-13.3.
+probeG cell level (1650 cells, raw mean 0.4817): cap1 -0.07973/14.3/-203.0,
+  cap2 -0.03213/20.1/-155.2, cap3 -0.01439/23.2/-113.4, half -0.02203/21.0/-136.1.
+Manuscript corrections from this pass: 687->607 cells, 61->81 cells, 0.268->0.261,
+  0.53->0.54, partial -0.177->-0.135 (p 8e-4), lcb 46.6->46.5, 203->205 assays.
