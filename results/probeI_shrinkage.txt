@@ -1,0 +1,40 @@
+probeI, tail-weighted shrinkage vs plain isotonic, all ProteinGym DMS assays.
+Letter-decoded and re-verified. 1509 cells, 202 assays.
+
+VERIFICATION: probeH.csv and probeI.csv agree on raw, iso, ceiling and realized
+for 1.0000 of all 1509 merged cells. Protocol replication exact.
+
+Aggregation: group by (assay, frac, K), median over seeds. This is the grouping
+that the win rates and Wilcoxon p-values in the paper already use.
+
+rule            median   mean|.|   win vs raw   log10 p
+raw             0.1663   0.2454    -            -
+iso             0.0503   0.1001    75.7         -120.4
+shra (all-CV)   0.1078   0.1791    67.0         -111.9
+shrt (tail-CV)  0.0866   0.1253    69.6         -124.5
+
+SHRT vs ISO: win 28.3%, log10 p = -35.0  -> isotonic wins 71.7%, significantly.
+W_ALL_MEAN = 0.3350   W_TAIL_MEAN = 0.5000
+
+DECISION (pre-registered): shrinkage FAILED both conditions. It does not beat
+isotonic on mean absolute gap (0.1253 vs 0.1001) and the paired test favours
+isotonic. Plain isotonic KEEPS the headline. The simulation advantage did not
+transfer.
+
+TWO ERRORS IN THE CURRENT MANUSCRIPT, both mine, both must be fixed:
+1. Decode error. I read iso mean|.| as 0.1075 and wrote 0.108 in the abstract
+   and Table 5. The true value is 0.1001 under this grouping (0.1005 under
+   probeH's own grouping). Misread Q.AQQE as Q.AQGE.
+2. Aggregation inconsistency. Abstract and Table 5 take medians/means from
+   probeH_report.txt (a different grouping: 0.1727 / 0.2506 / 0.0634 / 0.1005)
+   but take win% and p from the (assay,frac,K) grouping. Must standardize.
+
+CORRECTED headline under the consistent grouping:
+  mean absolute gap  0.245 -> 0.100
+  median gap         0.166 -> 0.050
+  win 75.7%, p ~ 1e-120
+
+STILL NEEDED: bin and tweed median/mean under the consistent grouping, to
+rebuild Table 5. Previously recorded (consistent grouping): bin win 62.3,
+log10p -21.4, mean|.| 0.1701; tweed win 1.6, log10p -245.8, mean|.| 5.6895.
+Medians for bin/tweed not yet recomputed under this grouping.
