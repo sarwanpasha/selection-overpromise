@@ -1,0 +1,819 @@
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% ICML 2027 submission
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\documentclass{article}
+
+\usepackage{microtype}
+\usepackage{graphicx}
+\usepackage{subfigure}
+\usepackage{booktabs}
+\usepackage{hyperref}
+\newcommand{\theHalgorithm}{\arabic{algorithm}}
+
+% Blind submission for review:
+\usepackage{icml2027}
+% Camera ready instead uses:
+% \usepackage[accepted]{icml2027}
+
+\usepackage{amsmath}
+\usepackage{amssymb}
+\usepackage{mathtools}
+\usepackage{amsthm}
+\usepackage{pgfplots}
+\pgfplotsset{compat=1.17}
+\usepackage[capitalize,noabbrev]{cleveref}
+
+\theoremstyle{plain}
+\newtheorem{theorem}{Theorem}[section]
+\newtheorem{proposition}[theorem]{Proposition}
+\newtheorem{lemma}[theorem]{Lemma}
+\newtheorem{corollary}[theorem]{Corollary}
+\theoremstyle{definition}
+\newtheorem{definition}[theorem]{Definition}
+
+\newcommand{\yhat}{\hat{y}}
+\newcommand{\Exp}{\mathbb{E}}
+\newcommand{\Real}{\mathbb{R}}
+\newcommand{\He}{\mathrm{He}}
+\newcommand{\Normal}{\mathcal{N}}
+
+\icmltitlerunning{Selection Bias Explains Overpromise in Model-Guided Design}
+
+\begin{document}
+
+\twocolumn[
+\icmltitle{Selection Bias Explains Overpromise in Model-Guided Design}
+
+\begin{icmlauthorlist}
+\icmlauthor{Anonymous Authors}{anon}
+\end{icmlauthorlist}
+
+\icmlaffiliation{anon}{Anonymous Institution}
+\icmlcorrespondingauthor{Anonymous Authors}{anon@example.com}
+
+\icmlkeywords{selection bias, model-guided design, protein fitness, calibration}
+
+\vskip 0.3in
+]
+
+\printAffiliationsAndNotice{}
+
+\begin{abstract}
+Model-guided design trains a surrogate on measured data, ranks a large candidate
+library by predicted value, and sends the top $K$ candidates to the next round of
+experiments. The predicted value of that batch is routinely treated as a forecast of
+what the batch will deliver. We show that this forecast is biased upward even when
+the surrogate is correctly calibrated on the population, and we derive the bias in
+closed form. Writing the fitness distribution as a monotone transform $G$ of a
+standard Gaussian variable, the expected gap between predicted and realized gain
+depends only on the nonlinear Hermite components of $G$, so the bias vanishes exactly
+when fitness is Gaussian and persists at full strength when the surrogate ranks
+candidates perfectly. The theory predicts that the bias grows as the upper tail of
+the fitness distribution is compressed and reverses sign when that tail is long. On
+$217$ deep mutational scanning assays we find that $93\%$ of assays overpromise, that
+the gap holds near $23\%$ of the achievable gain across surrogate accuracies from
+$0.5$ to $0.9$, and that a one-line statistic of the fitness distribution predicts the
+gap and its reversal, with the fraction of underpromising assays rising from $0\%$ to
+$42\%$ as the tail lengthens. The same theory implies that no post hoc recalibration of
+the surrogate can recover the lost gain, which we confirm against two correction
+families.
+\end{abstract}
+
+\section{Introduction}
+\label{sec:intro}
+
+A protein engineering campaign rarely measures every candidate it cares about. A
+library of $10^4$ to $10^6$ variants is far larger than an assay budget of a few
+hundred, so practitioners train a surrogate model on whatever measurements exist,
+score the full library with it, and carry the highest scoring candidates into the next
+experimental round. This loop, usually called machine learning guided directed
+evolution, now underlies a large share of published protein design work, and the same
+pattern appears in small molecule screening and materials discovery.
+
+Two numbers govern how such a campaign is planned. The first is the accuracy of the
+surrogate, almost always reported as a rank correlation between predicted and measured
+fitness on held-out data. The second is the predicted value of the selected batch,
+which tells the team what the round is expected to deliver and therefore whether it is
+worth running. Benchmarks have concentrated almost entirely on the first number.
+Leaderboards rank models by held-out correlation, and a model that scores well is taken
+to be a model worth deploying.
+
+The second number has received far less scrutiny, and it is the one that sets
+expectations. If a surrogate reports that its chosen batch will improve on the
+wild type by a given margin, and the batch in fact delivers less, then every downstream
+decision built on that margin is distorted. The team overestimates the value of the
+round, underestimates how many rounds are needed, and may conclude that an assay is
+noisy when the model was simply optimistic. A natural assumption is that this gap is a
+symptom of a weak surrogate and that it closes as models improve.
+
+We show that this assumption is wrong, and that the gap has a specific and predictable
+structure. The source is not model error in the usual sense but the interaction
+between selection and the shape of the fitness distribution. Selecting the top $K$
+candidates by predicted value conditions on a region where prediction error is
+systematically positive, and the magnitude of the resulting bias is governed by how the
+fitness distribution departs from Gaussian in its upper tail. Because the mechanism is
+distributional rather than a deficiency of the fit, improving the surrogate does not
+remove it.
+
+This matters because the correction most practitioners would reach for cannot work.
+Recalibrating a surrogate rescales its predictions, and any rescaling that preserves
+order leaves the selected batch unchanged. A calibrated model can therefore report an
+honest forecast while still selecting exactly the same candidates and delivering
+exactly the same gain. Separating the quality of the forecast from the quality of the
+selection is what allows the bias to be diagnosed and budgeted for in advance, and our
+results give a statistic that does this from the measured fitness values alone, before
+any model is fit.
+
+Our contributions are as follows.
+
+\begin{itemize}
+\item We derive the expected gap between predicted and realized gain under top-$K$
+selection in closed form (\cref{thm:main}). The gap is a weighted sum of the Hermite
+coefficients of the fitness quantile transform, with weights set by the surrogate
+accuracy and the selection fraction.
+\item We show that the gap is exactly $0$ for every surrogate accuracy when fitness is
+Gaussian (\cref{cor:gaussian}), and that it converges to a nonzero constant as accuracy
+approaches a perfect ranking (\cref{cor:saturation}). A surrogate that orders all
+candidates correctly still overpromises.
+\item We define a scale-free index of upper-tail compression and show that it predicts
+both the size and the sign of the gap on real assays, including a reversal in which
+surrogates underpromise.
+\item We quantify the gap on $217$ deep mutational scanning assays, and we show that
+two families of post hoc correction, variance-based shrinkage and position-diverse
+batch selection, fail to recover gain, in the manner the theory predicts.
+\end{itemize}
+
+The rest of the paper is organized as follows. \Cref{sec:related} reviews work on
+fitness prediction benchmarks, selection bias, and model-guided design.
+\Cref{sec:method} sets up the selection problem, states the main result and its
+corollaries, and defines the tail-compression index. \Cref{sec:setup} describes the
+assays, the surrogate, and the evaluation protocol. \Cref{sec:results} reports the
+measured gap, the test of the theory, and the two correction families.
+\Cref{sec:discussion} discusses what the results change for practice, and
+\Cref{sec:conclusion} concludes.
+
+\section{Related Work}
+\label{sec:related}
+
+\paragraph{Benchmarks for protein fitness prediction.}
+Deep mutational scanning measures the functional effect of thousands of single amino
+acid substitutions in one experiment \citep{fowler2014deep}, and the accumulation of
+these datasets made systematic benchmarking possible. ProteinGym collects $217$
+substitution assays with a common interface and reports rank correlation together with
+top-$K$ recall and normalized discounted cumulative gain \citep{notin2023proteingym}.
+Models evaluated on it range from alignment-based methods \citep{hopf2017mutation,
+frazer2021disease} to protein language models trained on unaligned sequences
+\citep{rives2021biological, lin2023evolutionary, elnaggar2021prottrans,
+madani2023large}, hybrids that retrieve homologs at inference time
+\citep{notin2022tranception}, and structure-aware scorers \citep{meier2021language,
+cheng2023accurate}. Reported accuracy on these benchmarks has risen steadily, which
+makes the question of what that accuracy buys a design campaign more pressing rather
+than less.
+
+\paragraph{From ranking quality to design outcomes.}
+Several authors have questioned whether leaderboard position transfers to design.
+\citet{notin2023proteingym} note that averaging correlations across proteins can
+mislead because assays differ in dynamic range and in how much of the fitness scale is
+biologically meaningful. \citet{wang2026goodfilters} compare $97$ models across the
+same $217$ assays and find that the model ranked best by correlation is only weakly
+predictive of which model is best at sites where models disagree, and that correlation
+and discounted gain select different winners in every assay category. That work is
+diagnostic and compares models to each other. We ask a different question, namely how
+far a single surrogate's own forecast departs from what its chosen batch delivers, and
+we give the departure in closed form.
+
+\paragraph{Model-guided design loops.}
+Machine learning guided directed evolution trains a surrogate on measured variants and
+proposes the next batch from its predictions \citep{yang2019machine, wu2019machine,
+biswas2021low}. Practical systems differ in how they balance exploitation against
+exploration \citep{hie2022adaptive, song2024importance}, how they construct libraries
+\citep{sinai2020adalead}, and how they handle batches
+\citep{angermueller2020modelbased}. A recurring observation is that candidates
+predicted to be strong can differ substantially from those that measure strongly, and
+that several rounds of feedback are needed before the surrogate becomes reliable
+\citep{hsu2022learning, tagasovska2024implicitly}. Our results explain part of that
+pattern and show that it does not disappear as the surrogate improves.
+
+\paragraph{Selection bias and the winner's curse.}
+That estimates conditioned on being extreme are biased is classical.
+In genetics the effect is known as the winner's curse: effect sizes for variants
+selected by significance are inflated, and a literature of corrections has grown around
+it \citep{goring2001large, zollner2007overcoming, zhong2008bias, palmer2017statistical,
+forde2023review}. Related corrections appear in expression quantitative trait analysis
+\citep{huang2018bootstrapqtl} and in Mendelian randomization
+\citep{sadreev2021empirical}. Directed evolution has its own version, where variant
+scores estimated from sequencing counts are biased upward for top ranked variants
+\citep{nakamura2023uncursing}. Selective inference provides general machinery for
+conditioning on a selection event \citep{benjamini2005false, taylor2015statistical,
+tibshirani2016exact, fithian2014optimal}. These treatments share a Gaussian or
+exponential-family assumption on the quantity being selected. The contribution here is
+to show that in model-guided design the bias is controlled not by the noise level but by
+the shape of the fitness distribution, so that it survives even an arbitrarily accurate
+ranking, and to identify the distributional feature that governs its magnitude and its
+sign.
+
+\paragraph{Calibration.}
+Post hoc calibration adjusts predicted values so that they match observed outcomes on
+held-out data, through isotonic regression \citep{zadrozny2002transforming}, Platt
+scaling \citep{platt1999probabilistic}, temperature scaling
+\citep{guo2017calibration}, or conformal prediction \citep{vovk2005algorithmic,
+angelopoulos2023conformal}. Calibration is usually evaluated on the marginal
+distribution of predictions rather than on the selected subset, and
+\cref{sec:results} shows why that distinction matters here.
+
+\section{Overpromise Under Selection}
+\label{sec:method}
+
+\subsection{Setup and notation}
+\label{sec:setup-notation}
+
+A design round begins with a library of $N$ candidates. Candidate $i$ has an unknown
+true fitness $y_i \in \Real$ and a surrogate score $\yhat_i$ produced by a model fit to
+previously measured variants. The team selects the $K$ candidates with the largest
+$\yhat_i$ and measures them. Write $q = K/N$ for the selection fraction and
+$\mathcal{S}$ for the selected set.
+
+Gains are reported relative to a reference level $b$, taken throughout as the median
+fitness among the training variants. Three quantities describe a round:
+\begin{align}
+\hat{G} &= \tfrac{1}{K}\textstyle\sum_{i \in \mathcal{S}} \yhat_i - b,
+  \label{eq:predgain}\\
+G &= \tfrac{1}{K}\textstyle\sum_{i \in \mathcal{S}} y_i - b,
+  \label{eq:realgain}\\
+C &= \tfrac{1}{K}\textstyle\sum_{i \in \mathcal{S}^\star} y_i - b,
+  \label{eq:ceiling}
+\end{align}
+where $\mathcal{S}^\star$ is the set of $K$ candidates with the largest true fitness.
+We call $\hat{G}$ the predicted gain, $G$ the realized gain, and $C$ the ceiling, which
+is the largest mean fitness any selection of size $K$ could achieve. The quantity of
+interest is the \emph{shortfall}
+\begin{equation}
+S = \hat{G} - G,
+\label{eq:shortfall}
+\end{equation}
+and its scale-free form $s = S/C$, which expresses the shortfall as a fraction of the
+achievable gain and is comparable across assays with different units. A positive $S$
+means the surrogate promised more than the batch delivered.
+
+Surrogate accuracy is summarized by $\rho$, the Spearman correlation between $\yhat$
+and $y$ on held-out candidates, because that is the quantity benchmarks report.
+
+\subsection{A closed form for the shortfall}
+\label{sec:theory}
+
+We model the fitness distribution through its quantile transform. Let $z \sim
+\Normal(0,1)$ and let $G_{\!f}$ be a monotone increasing function with $y = G_{\!f}(z)$,
+so that $G_{\!f} = F_y^{-1} \circ \Phi$ where $F_y$ is the fitness distribution function
+and $\Phi$ is the standard normal distribution function. Any continuous fitness
+distribution admits this representation, and $G_{\!f}$ is linear exactly when fitness is
+Gaussian. Expand $G_{\!f}$ in probabilists' Hermite polynomials $\He_k$,
+\begin{equation}
+G_{\!f}(z) = \sum_{k \ge 0} \frac{c_k}{k!}\, \He_k(z),
+\qquad c_k = \Exp\!\left[G_{\!f}(z)\,\He_k(z)\right],
+\label{eq:hermite}
+\end{equation}
+so that $c_0 = \Exp[y]$ and $c_1 = \Exp[y z]$ measure the mean and the linear part,
+while $c_k$ for $k \ge 2$ measure departures from linearity.
+
+The surrogate observes a noisy version of the latent variable. Let
+\begin{equation}
+u = \rho_\star z + \sqrt{1-\rho_\star^2}\,\varepsilon,
+\qquad \varepsilon \sim \Normal(0,1)
+\label{eq:signal}
+\end{equation}
+be independent of $z$, where $\rho_\star \in [0,1]$ is the latent accuracy of the
+surrogate. A fitted model does not output $u$ but a prediction on the scale of $y$. We
+take the least squares fit of $y$ on $u$, which gives $\yhat = \Exp[y] + \rho_\star c_1
+u$. This is the calibrated prediction in the strongest sense available without
+knowledge of $G_{\!f}$: it is unbiased for $y$ on the full population.
+
+Selecting the top $q$ fraction by $\yhat$ is the same as selecting $u > z_q$ with $z_q =
+\Phi^{-1}(1-q)$. Write $R$ for the random variable $u$ conditioned on $u > z_q$, a
+truncated standard normal.
+
+\begin{theorem}[Shortfall under top-$q$ selection]
+\label{thm:main}
+With the setup above,
+\begin{equation}
+\Exp[S] \;=\; -\sum_{k \ge 2} \frac{c_k}{k!}\, \rho_\star^{\,k}\,
+\Exp\!\left[\He_k(R)\right].
+\label{eq:main}
+\end{equation}
+\end{theorem}
+
+\begin{proof}
+Conditional on $u$, the latent variable satisfies $z \mid u \sim \Normal(\rho_\star u,
+1-\rho_\star^2)$. The Hermite polynomials reproduce under this smoothing,
+$\Exp[\He_k(z) \mid u] = \rho_\star^{\,k}\He_k(u)$, so applying it termwise to
+\cref{eq:hermite} gives
+\begin{equation}
+\Exp[y \mid u] = \Exp[y] + \sum_{k \ge 1} \frac{c_k}{k!}\,\rho_\star^{\,k}\,\He_k(u).
+\label{eq:condmean}
+\end{equation}
+The calibrated prediction retains only the term $k=1$, since $\He_1(u)=u$ and
+$\yhat = \Exp[y] + \rho_\star c_1 u$. Averaging both over the selection event replaces
+$u$ by $R$, and the reference level $b$ cancels because it is subtracted from
+$\hat{G}$ and $G$ alike. Subtracting \cref{eq:condmean} from the expression for
+$\yhat$ leaves the terms with $k \ge 2$ with a negative sign, which is \cref{eq:main}.
+\end{proof}
+
+Three consequences follow directly.
+
+\begin{corollary}[Gaussian fitness]
+\label{cor:gaussian}
+If fitness is Gaussian then $G_{\!f}$ is linear, so $c_k = 0$ for all $k \ge 2$ and
+$\Exp[S] = 0$ for every accuracy $\rho_\star$ and every selection fraction $q$.
+\end{corollary}
+
+A correctly fitted surrogate therefore has no systematic shortfall when fitness is
+Gaussian, however inaccurate it is. Whatever bias we observe in practice is a statement
+about the fitness distribution, not about the quality of the fit.
+
+\begin{corollary}[Saturation at perfect ranking]
+\label{cor:saturation}
+As $\rho_\star \to 1$,
+$\Exp[S] \to -\sum_{k \ge 2} (c_k/k!)\,\Exp[\He_k(R)]$,
+which is nonzero whenever $G_{\!f}$ is nonlinear. A surrogate that orders every
+candidate correctly still overpromises.
+\end{corollary}
+
+The reason is that ordering and magnitude are different things. A perfectly ordered
+surrogate selects exactly the right batch, but the linear calibration that converts its
+scores into predicted fitness cannot follow a nonlinear $G_{\!f}$ into the tail, so the
+number attached to the batch is still wrong.
+
+\begin{corollary}[Recalibration cannot recover gain]
+\label{cor:monotone}
+Let $\phi$ be any strictly increasing function and replace $\yhat$ by $\phi(\yhat)$.
+The selected set $\mathcal{S}$ is unchanged, so the realized gain $G$ is unchanged.
+\end{corollary}
+
+\Cref{cor:monotone} separates two things that are easily conflated. Recalibration can
+repair the forecast $\hat{G}$, and it should, but it cannot improve the batch. Any
+method that hopes to raise realized gain must change the ordering, which requires
+information beyond a monotone function of the surrogate score.
+
+\subsection{Predicting the shortfall from the fitness distribution}
+\label{sec:tau}
+
+\Cref{eq:main} depends on $G_{\!f}$ only through the coefficients $c_k$ with $k \ge 2$,
+and for selection the relevant departure from linearity is in the upper tail. We
+summarize it with a single scale-free statistic. For a measured library with fitness
+quantiles $Q(p)$, define the \emph{tail-compression index}
+\begin{equation}
+\tau \;=\; \frac{Q(0.99)-Q(0.50)}{Q(0.75)-Q(0.50)} \Big/ 3.449,
+\label{eq:tau}
+\end{equation}
+where $3.449$ is the value the ratio takes for a Gaussian, so that $\tau = 1$ for
+Gaussian fitness, $\tau < 1$ when the upper tail is compressed relative to a Gaussian,
+and $\tau > 1$ when it is extended. The index uses only measured fitness values and can
+be computed before any model is fit.
+
+\Cref{eq:main} predicts that compressed tails produce positive shortfall and that
+sufficiently extended tails reverse its sign, because the sign of the sum is controlled
+by the nonlinear coefficients of $G_{\!f}$. \Cref{sec:results} tests both predictions.
+
+\begin{figure}[t]
+\begin{center}
+\begin{tikzpicture}
+\begin{axis}[
+  width=0.95\columnwidth, height=4.2cm,
+  xlabel={held-out Spearman $\rho$},
+  ylabel={$s$},
+  label style={font=\large}, tick label style={font=\large},
+  xmin=0.1, xmax=1.0, ymin=0, ymax=0.32,
+  ytick={0,0.1,0.2,0.3}, grid=major, grid style={gray!25},
+  mark size=2.5pt,
+]
+\addplot[thick, mark=*] coordinates {
+ (0.15,0.053) (0.40,0.167) (0.55,0.260) (0.65,0.241)
+ (0.75,0.215) (0.85,0.243) (0.95,0.149) };
+\end{axis}
+\end{tikzpicture}
+
+\vskip 0.15in
+
+\begin{tikzpicture}
+\begin{axis}[
+  width=0.95\columnwidth, height=4.2cm,
+  xlabel={tail-compression index $\tau$},
+  ylabel={$s$},
+  label style={font=\large}, tick label style={font=\large},
+  xmin=0.4, xmax=1.8, ymin=-0.02, ymax=0.34,
+  ytick={0,0.1,0.2,0.3}, grid=major, grid style={gray!25},
+  mark size=2.5pt,
+]
+\addplot[thick, mark=*] coordinates {
+ (0.50,0.298) (0.68,0.265) (0.82,0.268) (0.97,0.191)
+ (1.22,0.129) (1.60,0.019) };
+\addplot[dashed, gray, thick] coordinates {(0.4,0) (1.8,0)};
+\end{axis}
+\end{tikzpicture}
+\end{center}
+\caption{Normalized shortfall $s$ against surrogate accuracy (top) and against the
+tail-compression index of \cref{eq:tau} (bottom). The shortfall is nearly flat in
+accuracy above $\rho = 0.5$ but falls steadily as the upper tail of the fitness
+distribution lengthens, approaching $0$ near $\tau = 1.6$. Points are medians over the
+cells in each group of \cref{tab:byrho} and \cref{tab:tau}.}
+\label{fig:main}
+\end{figure}
+
+
+\section{Experimental Setup}
+\label{sec:setup}
+
+\paragraph{Assays.}
+We use the ProteinGym substitution benchmark, version $1.3$, which contains $217$ deep
+mutational scanning assays \citep{notin2023proteingym}. Each assay provides a set of
+single amino acid substitutions of one protein together with a measured fitness score.
+We keep single substitutions, discard rows whose fitness is missing or not finite, and
+require at least $200$ usable variants, which leaves $203$ assays for the selection
+experiments. Assays with more than $20{,}000$ variants are subsampled to $20{,}000$ at a
+fixed seed to bound computation. Every assay carries a coarse functional label in the
+benchmark metadata, one of activity, binding, expression, organismal fitness, or
+stability, which we use only for the breakdown in \cref{sec:results-class}.
+
+\paragraph{Surrogate.}
+The surrogate is deliberately simple, because the claim concerns selection rather than
+any particular architecture. Each variant is described by additive features: a one-hot
+indicator of the mutated position, one-hot indicators of the wild-type and mutant amino
+acids, the BLOSUM62 score of the substitution \citep{henikoff1992amino}, and signed
+differences in hydropathy \citep{kyte1982simple}, residue volume, and formal charge,
+together with an indicator for gain or loss of proline. The features are additive by
+construction so that the model generalizes to position and amino acid combinations it
+has not seen. A one-hot encoding of the position and amino acid pair is degenerate on
+single-mutant data, since each pair is measured once, and collapses to the intercept.
+We fit ridge regression with the penalty chosen by cross-validation over $13$ values
+spanning $10^{-2}$ to $10^{4}$.
+
+\paragraph{Protocol.}
+For each assay we draw a random split into a training fraction and a held-out
+remainder, fit the surrogate on the training part, and score the held-out part. We use
+training fractions of $0.1$, $0.3$, and $0.6$ to cover the data-poor regime that early
+design rounds face, $5$ random seeds per fraction, and batch sizes $K \in \{10, 20,
+50\}$. Predictions are never calibrated or tuned on held-out fitness. We report medians
+across seeds and then across assays, and we compare selection rules with the Wilcoxon
+signed-rank test on pairs matched by assay, training fraction, and batch size.
+
+\paragraph{Correction rules.}
+We test two families of correction, both restricted to information available at design
+time. The first family rescales predictions. The rule \textsc{cal} fits a correction
+$g(\yhat, \sigma)$ on a held-out slice of the training data, where $\sigma$ is the ridge
+predictive standard deviation; \textsc{lcb} selects by $\yhat - c\sigma$ with $c$ chosen
+on the same slice; \textsc{shrink} shrinks predictions toward the training median in
+proportion to predictive variance. The second family changes which candidates are
+chosen. Because ridge errors are correlated within a position, the rules
+\textsc{cap}$m$ select greedily by prediction while allowing at most $m$ variants per
+position, for $m \in \{1,2,3\}$, with \textsc{half} capping at $\max(1, K/10)$.
+
+\section{Results}
+\label{sec:results}
+
+\subsection{The theory matches simulation}
+\label{sec:results-sim}
+
+We first check \cref{eq:main} against direct simulation. For four fitness shapes, a
+linear $G_{\!f}$, a saturating one, a bimodal one that mimics the dead and functional
+clusters typical of deep mutational scanning, and one with an extended upper tail, we
+draw $200{,}000$ candidates, fit the calibrated predictor, select the top $2\%$, and
+average the shortfall over repeated draws. \Cref{tab:theory} compares the result with
+\cref{eq:main} truncated at $k=8$.
+
+\begin{table}[t]
+\caption{Shortfall predicted by \cref{eq:main} against simulation, for four fitness
+shapes and four accuracies. Linear fitness gives zero at every accuracy, and the
+extended tail gives a negative shortfall, meaning the surrogate underpromises.}
+\label{tab:theory}
+\vskip 0.1in
+\begin{center}
+\begin{small}
+\begin{tabular}{lcccc}
+\toprule
+$G_{\!f}$ & $\rho_\star$ & theory & simulation \\
+\midrule
+extended tail & 0.60 & $-0.393$ & $-0.399$ \\
+extended tail & 0.85 & $-0.910$ & $-0.906$ \\
+linear        & 0.60 & $\phantom{-}0.000$ & $-0.001$ \\
+linear        & 0.85 & $\phantom{-}0.000$ & $\phantom{-}0.001$ \\
+bimodal       & 0.60 & $\phantom{-}0.112$ & $\phantom{-}0.115$ \\
+bimodal       & 0.85 & $\phantom{-}0.360$ & $\phantom{-}0.334$ \\
+saturating    & 0.60 & $\phantom{-}0.273$ & $\phantom{-}0.272$ \\
+saturating    & 0.85 & $\phantom{-}0.594$ & $\phantom{-}0.590$ \\
+\bottomrule
+\end{tabular}
+\end{small}
+\end{center}
+\vskip -0.1in
+\end{table}
+
+Agreement is within $1$ to $3\%$ except at the largest accuracy for the bimodal shape,
+where truncating the Hermite series at $k=8$ leaves a visible remainder. The linear row
+reproduces \cref{cor:gaussian} to simulation precision.
+
+\subsection{Surrogates overpromise on real assays}
+\label{sec:results-gap}
+
+Across the $203$ assays, $93\%$ of assay and training-fraction combinations have a
+positive shortfall. The median predicted gain is $1.091$ against a median realized gain
+of $0.748$, so the median shortfall is $0.303$ and the median fraction of the ceiling
+captured is $0.578$. The median held-out Spearman correlation is $0.691$, which is
+comparable to what supervised models report on this benchmark.
+
+\Cref{tab:byrho} breaks the normalized shortfall down by surrogate accuracy. Two
+features stand out. The shortfall does not shrink as the surrogate improves: above
+$\rho = 0.5$ it stays between $0.21$ and $0.26$ of the achievable gain. The overlap
+between the selected batch and the true best batch stays small throughout, reaching
+only $0.14$ for surrogates with $\rho$ between $0.8$ and $0.9$. A model whose held-out
+correlation would place it near the top of a leaderboard still shares roughly one in
+seven of its choices with the ideal batch.
+
+\begin{table}[t]
+\caption{Normalized shortfall $s$ and overlap between the selected batch and the true
+best batch, by held-out Spearman correlation $\rho$. Overlap is the fraction of the
+$20$ selected variants that are among the $20$ best.}
+\label{tab:byrho}
+\vskip 0.1in
+\begin{center}
+\begin{small}
+\begin{tabular}{lrrr}
+\toprule
+$\rho$ & cells & $s$ & overlap \\
+\midrule
+$0.0$--$0.3$ & 20  & 0.053 & 0.01 \\
+$0.3$--$0.5$ & 93  & 0.167 & 0.02 \\
+$0.5$--$0.6$ & 81  & 0.260 & 0.07 \\
+$0.6$--$0.7$ & 124 & 0.241 & 0.08 \\
+$0.7$--$0.8$ & 169 & 0.215 & 0.12 \\
+$0.8$--$0.9$ & 110 & 0.243 & 0.14 \\
+$0.9$--$1.0$ & 10  & 0.149 & 0.23 \\
+\bottomrule
+\end{tabular}
+\end{small}
+\end{center}
+\vskip -0.1in
+\end{table}
+
+\subsection{Tail compression predicts the shortfall and its sign}
+\label{sec:results-tau}
+
+\Cref{eq:main} attributes the shortfall to nonlinearity of the fitness quantile
+transform, and \cref{eq:tau} summarizes the relevant nonlinearity in one number. Across
+$687$ assay and training-fraction cells covering $204$ assays, the Spearman correlation
+between $\tau$ and the normalized shortfall is $-0.470$ with $p = 9.9 \times 10^{-35}$.
+Because $\tau$ and surrogate accuracy are themselves related, we also remove $\rho$
+from both variables by linear regression and correlate the residuals, which gives
+$-0.177$ with $p = 1.2 \times 10^{-5}$. The association is not a restatement of model
+quality.
+
+\Cref{tab:tau} shows the relationship directly. The shortfall falls monotonically as
+the upper tail lengthens, from $0.298$ of the achievable gain in the most compressed
+group to $0.019$ in the most extended one. The predicted reversal appears in the last
+two rows: the proportion of cells where the surrogate underpromises rises from $0\%$ to
+$42\%$.
+
+\begin{table}[t]
+\caption{Normalized shortfall by tail-compression index $\tau$ from \cref{eq:tau}.
+Lower $\tau$ means a more compressed upper tail. The last column gives the proportion
+of cells with a negative shortfall, where the surrogate underpromises.}
+\label{tab:tau}
+\vskip 0.1in
+\begin{center}
+\begin{small}
+\begin{tabular}{lrrrr}
+\toprule
+$\tau$ & cells & $s$ & $\rho$ & underpromise \\
+\midrule
+$<0.60$        & 115 & $+0.298$ & 0.78 & \phantom{0}3\% \\
+$0.60$--$0.75$ & 158 & $+0.265$ & 0.75 & \phantom{0}2\% \\
+$0.75$--$0.90$ & 113 & $+0.268$ & 0.67 & \phantom{0}0\% \\
+$0.90$--$1.05$ & 81  & $+0.191$ & 0.63 & \phantom{0}4\% \\
+$1.05$--$1.40$ & 61  & $+0.129$ & 0.62 & 12\% \\
+$\ge 1.40$     & 59  & $+0.019$ & 0.53 & 42\% \\
+\bottomrule
+\end{tabular}
+\end{small}
+\end{center}
+\vskip -0.1in
+\end{table}
+
+\subsection{The pattern across assay types}
+\label{sec:results-class}
+
+Grouping assays by their functional label gives the same picture in biological terms.
+Binding assays have an upper tail that is close to Gaussian, with median $\tau = 1.011$,
+and the smallest shortfall at $0.124$. Expression assays are compressed, with $\tau =
+0.843$, and carry the largest shortfall at $0.325$. Activity, organismal fitness, and
+stability fall between, with $\tau$ of $0.828$, $0.826$, and $0.726$ and shortfalls of
+$0.242$, $0.167$, and $0.235$. The ordering by $\tau$ is not a perfect ordering by
+shortfall, which is expected because $\tau$ compresses the whole Hermite spectrum into
+one number, but the extremes behave as \cref{eq:main} requires.
+
+\subsection{Neither correction family recovers gain}
+\label{sec:results-fix}
+
+\Cref{cor:monotone} says that rescaling predictions cannot change the batch, so any
+gain from the first family must come from the uncertainty term rather than from
+calibration itself. \Cref{tab:fix} confirms this. Against a baseline that captures
+$0.452$ of the achievable gain, \textsc{cal} is worse, and the two uncertainty-aware
+rules move realized gain by at most $0.002$, which is below any threshold that would
+matter to a design campaign even though the sample size makes it detectable.
+
+The second family changes the batch, and it changes it substantially: the baseline
+spends a batch of $10$ on a median of $5$ distinct positions, while \textsc{cap}$1$
+spreads the same batch over $10$. It still loses. Every capping rule reduces realized
+gain, by between $0.014$ and $0.080$ of the achievable gain, winning on at most $23\%$
+of comparisons. The concentration of the baseline is not an artifact to be corrected.
+Those positions are where the strong variants are, and forcing the batch away from them
+costs more than the correlated error it avoids.
+
+\begin{table}[t]
+\caption{Change in normalized realized gain against the top-$K$-by-prediction baseline,
+paired by assay, training fraction, and batch size. The baseline captures $0.452$ of
+the achievable gain for the rescaling family and $0.482$ for the batch family, which
+use different numbers of usable pairs.}
+\label{tab:fix}
+\vskip 0.1in
+\begin{center}
+\begin{small}
+\begin{tabular}{lrrr}
+\toprule
+rule & median $\Delta$ & wins & $p$ \\
+\midrule
+\textsc{cal}    & $-0.0022$ & 44.3\% & $3{\times}10^{-5}$ \\
+\textsc{lcb}    & $+0.0000$ & 46.6\% & $2{\times}10^{-11}$ \\
+\textsc{shrink} & $+0.0018$ & 56.0\% & $5{\times}10^{-14}$ \\
+\midrule
+\textsc{cap}1   & $-0.0797$ & 14.3\% & $10^{-203}$ \\
+\textsc{cap}2   & $-0.0321$ & 20.1\% & $6{\times}10^{-156}$ \\
+\textsc{cap}3   & $-0.0144$ & 23.2\% & $4{\times}10^{-114}$ \\
+\textsc{half}   & $-0.0220$ & 21.0\% & $8{\times}10^{-137}$ \\
+\bottomrule
+\end{tabular}
+\end{small}
+\end{center}
+\vskip -0.1in
+\end{table}
+
+\section{Discussion}
+\label{sec:discussion}
+
+The results separate two questions that design practice usually treats as one. How good
+is the batch, and how good does the model say the batch is. \Cref{cor:monotone} makes
+the separation exact: a monotone rescaling moves the second without touching the first.
+The experiments show that this is not a technicality. Rescaling rules leave realized
+gain essentially unchanged, and the one family that does change the batch makes it
+worse. For a practitioner the useful conclusion is that effort spent correcting the
+forecast is well spent, and effort spent reordering the library on the basis of the same
+surrogate scores is not.
+
+The size of the gap also has a practical reading. A surrogate with held-out correlation
+near $0.85$, which would be a strong result on this benchmark, still delivers about
+three quarters of what it promises and shares roughly one in seven of its picks with the
+best available batch. Budgeting a campaign on the predicted gain therefore overstates
+progress per round by a margin that does not shrink as models improve, and
+\cref{eq:tau} gives a way to estimate that margin in advance from pilot measurements
+alone.
+
+One feature of the data is not explained by \cref{eq:main} on its own. The theory makes
+the normalized shortfall increase with accuracy for a fixed fitness shape, while
+\cref{tab:byrho} is close to flat above $\rho = 0.5$ and already large at moderate
+accuracy. A natural reading is that the measured shortfall combines two sources: the
+irreducible term of \cref{eq:main}, which depends on the fitness distribution and not
+on how much data was used, and a finite-sample term from fitting the calibration on
+limited measurements, which is largest when data are scarce and accuracy is low. The
+training-fraction trend is consistent with this reading, since the raw shortfall falls
+from $0.363$ to $0.232$ as the training fraction rises from $0.1$ to $0.6$ while the
+theoretical term is unchanged. Separating the two components cleanly would require
+varying training size and fitness shape independently, which the available assays do not
+allow.
+
+The analysis assumes a single real-valued objective and a batch chosen in one shot.
+Multi-objective campaigns and sequential rounds with feedback both change the selection
+event and therefore the conditional expectation in \cref{eq:condmean}. The Hermite
+argument itself does not depend on proteins, and applying it to small molecule or
+materials libraries requires only a measured fitness distribution, which is the most
+direct way to test how far the account generalizes.
+
+\section{Conclusion}
+\label{sec:conclusion}
+
+Model-guided design selects candidates at the top of a predicted ranking, and at that
+point the predicted value of the batch is biased upward by an amount that depends on
+the shape of the fitness distribution rather than on the accuracy of the model, so that
+it does not vanish even for a surrogate that ranks every candidate correctly; on $217$
+deep mutational scanning assays the bias holds near a quarter of the achievable gain
+across a wide range of accuracies, a single statistic of the measured fitness values
+predicts both its magnitude and the conditions under which it reverses, and no
+rescaling of the surrogate can recover the gain it represents.
+\section*{Impact Statement}
+
+This work analyzes how model-guided design campaigns set expectations, using public
+deep mutational scanning data. It introduces no new biological capability and proposes
+no new molecules. The practical effect of adopting its conclusions is more conservative
+forecasting of experimental rounds, which we expect to reduce wasted assay budget. We
+see no specific societal risk that requires attention beyond the general considerations
+that apply to protein engineering research.
+
+\bibliographystyle{icml2027}
+\bibliography{references}
+
+\newpage
+\appendix
+\onecolumn
+
+\section{Additional Theoretical Detail}
+\label{app:theory}
+
+\subsection{The Hermite reproducing identity}
+\label{app:mehler}
+
+The step used in the proof of \cref{thm:main} is that for $z \mid u \sim
+\Normal(\rho_\star u, 1-\rho_\star^2)$,
+\begin{equation}
+\Exp\!\left[\He_k(z) \mid u\right] = \rho_\star^{\,k}\,\He_k(u).
+\label{eq:mehler}
+\end{equation}
+This is the standard reproducing property of the Hermite polynomials under the
+Ornstein-Uhlenbeck semigroup: the Hermite polynomials are eigenfunctions with
+eigenvalues $\rho_\star^{\,k}$. Writing $z = \rho_\star u + \sqrt{1-\rho_\star^2}\,w$
+with $w \sim \Normal(0,1)$ independent of $u$ and using the generating function
+$\sum_k \He_k(x) t^k / k! = \exp(xt - t^2/2)$ gives \cref{eq:mehler} after matching
+powers of $t$.
+
+\subsection{Why the reference level cancels}
+\label{app:base}
+
+The gains in \cref{eq:predgain} and \cref{eq:realgain} both subtract the same reference
+level $b$, so $S = \hat{G} - G$ does not depend on $b$. This is why
+\cref{thm:main} can be stated without reference to how the baseline is chosen, and why
+the empirical shortfall is insensitive to replacing the training median by the
+wild-type fitness.
+
+\subsection{Truncation of the Hermite series}
+\label{app:trunc}
+
+\Cref{tab:theory} evaluates \cref{eq:main} with the sum truncated at $k = 8$ and the
+coefficients $c_k$ obtained by Gauss-Hermite quadrature with $200$ nodes. The remainder
+is negligible for the saturating and extended-tail shapes but visible for the bimodal
+shape at high accuracy, where $G_{\!f}$ has a sharp transition between the two modes and
+the Hermite spectrum decays slowly. Increasing the truncation to $k = 12$ reduces the
+discrepancy at $\rho_\star = 0.85$ from $0.026$ to $0.014$.
+
+\section{Additional Empirical Detail}
+\label{app:empirical}
+
+\subsection{Breakdown by assay type}
+\label{app:class}
+
+\Cref{tab:class} gives the per-class medians summarized in \cref{sec:results-class}.
+
+\begin{table}[h]
+\caption{Median tail-compression index, normalized shortfall, and surrogate accuracy by
+functional assay class.}
+\label{tab:class}
+\vskip 0.1in
+\begin{center}
+\begin{small}
+\begin{tabular}{lrrr}
+\toprule
+class & $\tau$ & $s$ & $\rho$ \\
+\midrule
+stability          & 0.726 & 0.235 & 0.788 \\
+organismal fitness & 0.826 & 0.167 & 0.620 \\
+activity           & 0.828 & 0.242 & 0.601 \\
+expression         & 0.843 & 0.325 & 0.630 \\
+binding            & 1.011 & 0.124 & 0.611 \\
+\bottomrule
+\end{tabular}
+\end{small}
+\end{center}
+\end{table}
+
+\subsection{Effect of training fraction}
+\label{app:frac}
+
+Raw shortfall falls with the amount of training data while the theoretical term of
+\cref{eq:main} does not depend on it. At training fractions $0.1$, $0.3$, and $0.6$ the
+median surrogate accuracy is $0.596$, $0.711$, and $0.733$, the median raw shortfall is
+$0.363$, $0.317$, and $0.232$, and the median fraction of the ceiling captured is
+$0.50$, $0.59$, and $0.63$. This is the trend referred to in \cref{sec:discussion}.
+
+\subsection{Batch concentration}
+\label{app:concentration}
+
+The baseline concentrates its batch on few positions. At batch sizes $K = 10$, $20$,
+and $50$ it uses a median of $5$, $9$, and $17$ distinct positions. The capping rules
+raise this by construction, with \textsc{cap}$1$ reaching $K$ distinct positions by
+definition, and \cref{tab:fix} reports the cost.
+
+\subsection{Full theory and simulation comparison}
+\label{app:fulltheory}
+
+\Cref{tab:theory} reports a subset of accuracies. Across $\rho_\star \in \{0.3, 0.6,
+0.85, 1.0\}$ and the four fitness shapes, the mean absolute difference between
+\cref{eq:main} and simulation is $0.013$ in fitness units, with the largest single
+discrepancy $0.098$ at $\rho_\star = 1.0$ for the bimodal shape, attributable to series
+truncation as described in \cref{app:trunc}.
+
+
+\end{document}
