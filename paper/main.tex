@@ -186,12 +186,12 @@ we give the departure in closed form.
 Machine learning guided directed evolution trains a surrogate on measured variants and
 proposes the next batch from its predictions \citep{yang2019machine, wu2019machine,
 biswas2021low}. Practical systems differ in how they balance exploitation against
-exploration \citep{hie2022adaptive, song2024importance}, how they construct libraries
+exploration \citep{hie2022adaptive, brookes2019conditioning, stanton2022accelerating}, how they construct libraries
 \citep{sinai2020adalead}, and how they handle batches
 \citep{angermueller2020modelbased}. A recurring observation is that candidates
 predicted to be strong can differ substantially from those that measure strongly, and
-that several rounds of feedback are needed before the surrogate becomes reliable
-\citep{hsu2022learning, tagasovska2024implicitly}. Our results explain part of that
+that quantifying uncertainty for designed candidates has to account for the feedback
+loop that produced them \citep{hsu2022learning, fannjiang2022conformal}. Our results explain part of that
 pattern and show that it does not disappear as the surrogate improves.
 
 \paragraph{Selection bias and the winner's curse.}
@@ -203,7 +203,7 @@ forde2023review}. Related corrections appear in expression quantitative trait an
 \citep{huang2018bootstrapqtl} and in Mendelian randomization
 \citep{sadreev2021empirical}. Directed evolution has its own version, where variant
 scores estimated from sequencing counts are biased upward for top ranked variants
-\citep{nakamura2023uncursing}. Selective inference provides general machinery for
+\citep{nemoto2023acides}. Selective inference provides general machinery for
 conditioning on a selection event \citep{benjamini2005false, taylor2015statistical,
 tibshirani2016exact, fithian2014optimal}. These treatments share a Gaussian or
 exponential-family assumption on the quantity being selected. The contribution here is
