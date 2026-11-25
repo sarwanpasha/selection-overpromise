@@ -1,0 +1,25 @@
+probeO -- closed-form Gaussian-copula model vs observed gaps on real assays.
+1509 cells, 202 assays. G = empirical quantile function of each assay's fitness values,
+rho_star = 2 sin(pi rho / 6) from the observed rank accuracy, quadrature evaluation.
+NOTHING is fitted to the observed gaps. Word-encoded read.
+
+gap:       pearson 0.707, spearman 0.653; median observed 0.1663, model 0.1251
+           sign agreement 78.9%
+           MAE model 0.1812 vs assuming no gap 0.2454; model closer in 62.6% of cells,
+           log10 p = -35.7
+captured:  pearson 0.861, spearman 0.793; median observed 0.5229, model 0.6369
+assay-level gap spearman 0.721 (n = 202)
+
+by tau stratum (n, observed median gap, model median gap):
+  <0.60       204   0.208   0.274
+  0.60-0.75   357   0.233   0.293
+  0.75-0.90   285   0.223   0.165
+  0.90-1.05   234   0.159   0.092
+  1.05-1.40   264   0.099   0.006
+  >=1.40      165   0.021  -0.021
+
+Reading: the model reproduces the decline of the gap with tau and most of its magnitude
+with no free parameters. It runs 0.07 to 0.09 below the observations from tau 0.75
+upward, i.e. real assays carry a baseline gap the idealized model lacks. That is the
+same offset that made the zero-anchored tau rule lose to the free rule in probeL.
+The model also overstates captured gain (0.64 vs 0.52).
