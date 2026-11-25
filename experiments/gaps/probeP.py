@@ -27,20 +27,20 @@ RULES = ('raw', 'iso', 'conf_shift', 'conf_tail', 'conf_lo')
 
 
 def zs_scores(name, mutants):
-    """Return {model: array aligned to mutants} for zero-shot files that exist."""
+    """Return {model: array aligned to mutants}; one file per assay, one column per model."""
+    f = os.path.join(ZSDIR, name)
+    if not os.path.exists(f):
+        return {}
+    z = pd.read_csv(f)
+    if 'mutant' not in z.columns:
+        return {}
+    z = z.drop_duplicates('mutant').set_index('mutant')
     out = {}
     for m in ZSMODELS:
-        f = os.path.join(ZSDIR, m, name)
-        if not os.path.exists(f):
+        if m not in z.columns:
             continue
-        z = pd.read_csv(f)
-        num = [c for c in z.columns if c not in ('mutant', 'mutated_sequence', 'DMS_score',
-               'DMS_score_bin') and pd.api.types.is_numeric_dtype(z[c])]
-        if 'mutant' not in z.columns or not num:
-            continue
-        s = z.drop_duplicates('mutant').set_index('mutant')[num[-1]]
-        v = s.reindex(mutants).values.astype(float)
-        if np.isfinite(v).mean() > 0.95:
+        v = pd.to_numeric(z[m], errors='coerce').reindex(mutants).values.astype(float)
+        if np.isfinite(v).mean() > 0.95 and np.nanstd(v) > 1e-12:
             v[~np.isfinite(v)] = np.nanmedian(v)
             out[m] = v
     return out
