@@ -76,7 +76,8 @@ is long. On $217$ deep mutational scanning assays we find that $93\%$ of assays
 overpromise, that the gap holds near $23\%$ of the achievable gain across surrogate
 accuracies from $0.5$ to $0.9$, and that a one-line statistic of the fitness
 distribution predicts the gap and its reversal, with the fraction of underpromising
-assays rising from $0\%$ to $42\%$ as the tail lengthens. The diagnosis is
+assays rising from $0\%$ to $42\%$ as the tail lengthens. The same gap appears in
+superconductors, small molecules and antimicrobial peptides. The diagnosis is
 constructive: estimating the conditional mean by isotonic regression on held-out data
 cuts the mean absolute gap from $0.245$ to $0.100$ and the median gap from $0.166$ to
 $0.057$, winning on $76\%$ of assay and budget combinations, while leaving the selected
@@ -685,17 +686,11 @@ perfect ordering by shortfall, since $\tau$ compresses the whole Hermite spectru
 one number, but the extremes behave as \cref{eq:main} requires. \Cref{app:class} gives
 the full breakdown.
 
-Individual assays show the pattern more sharply than the class medians. The
-SARS-CoV-2 spike receptor binding domain carries the most compressed upper tail in the
-benchmark, $\tau = 0.43$, and its forecast overstates the achievable gain by $1.08$,
-which is more than the whole gain available; estimating the conditional mean brings
-that to $0.09$. Yeast ubiquitin behaves the same way at $\tau = 0.50$, from $1.10$ to
-$0.01$. At the opposite end human ACE2, with the longest tail of the group at $\tau =
-1.86$, underpromises at $-0.06$. The instructive exception is GFP, where $\tau = 1.12$
-places it among the extended tails yet the gap is $+0.86$: it is also the smallest
-assay of the group, with $433$ usable variants, and the one the surrogate ranks worst,
-at $\rho = 0.12$, so its forecast error reflects a failed fit rather than tail shape.
-\Cref{tab:named} collects these cases.
+Individual assays show the pattern more sharply. The SARS-CoV-2 spike receptor binding
+domain has the most compressed tail in the benchmark, $\tau = 0.43$, and overstates the
+achievable gain by $1.08$, more than the whole gain available, which recalibration
+brings to $0.09$; human ACE2, with the longest tail at $\tau = 1.86$, underpromises at
+$-0.06$. \Cref{tab:named} collects these cases, including one instructive exception.
 
 
 \subsection{Neither correction family recovers gain}
@@ -781,7 +776,7 @@ surrogate.
 \begin{center}
 \begin{tikzpicture}
 \begin{axis}[
-  width=0.95\columnwidth, height=4.6cm,
+  width=0.95\columnwidth, height=3.5cm,
   xlabel={$\tau$}, ylabel={gap / ceiling},
   label style={font=\small}, tick label style={font=\small},
   legend style={font=\small, draw=none, at={(0.97,0.95)}, anchor=north east},
@@ -856,6 +851,22 @@ describing one. It does not. Using it to select moves realized gain by a median 
 $-0.637$ and wins in $0.5\%$ of combinations, which is the behavior
 \cref{cor:monotone} leads one to expect of any rule that perturbs an ordering without
 adding information.
+
+\subsection{The gap is not specific to protein fitness}
+\label{sec:results-domains}
+
+Everything above concerns one benchmark, so we repeated the experiment on four datasets
+from three unrelated fields: superconductor critical temperature, small-molecule
+solubility, two aquatic toxicity endpoints, and antimicrobial peptide activity. The
+pipeline is unchanged; only the features differ, tabulated descriptors for the first
+four and $2$-mer counts for the peptides. Across
+$105$ dataset and budget combinations every domain overpromises, with median gaps from
+$+0.01$ to $+1.28$, the peptides overstating by more than the entire achievable gain.
+Isotonic recalibration cuts the pooled mean absolute gap from $0.385$ to $0.107$ at
+$p = 2 \times 10^{-5}$ and improves four of the five, being worse only on
+superconductors, the set with the highest surrogate accuracy and the smallest
+uncorrected gap. Only the sign of the gap carries across domains, not its ordering by
+$\tau$. \Cref{app:domains} gives the breakdown and the sources.
 
 \section{Discussion}
 \label{sec:discussion}
@@ -1002,9 +1013,10 @@ training fractions, seeds and budgets for that assay.
 
 \begin{table}[ht]
 \caption{Gap before and after conditional-mean recalibration for named assays, ordered
-by tail-compression index. The last two rows underpromise. GFP is the exception
-discussed in the text, where the surrogate ranks poorly rather than the tail being
-compressed.}
+by tail-compression index. The last two rows underpromise. GFP is the exception:
+extended at $\tau = 1.12$ yet overstating by $0.86$, it is the smallest assay here and
+the one the surrogate ranks worst, at $\rho = 0.12$, so its error reflects a failed fit
+rather than tail shape.}
 \label{tab:named}
 \vskip 0.1in
 \begin{center}
@@ -1124,6 +1136,44 @@ reported score, and isotonic regression is the better of the two in $71.7\%$ of
 combinations ($p = 10^{-35}$). The learned weight averages $0.50$, so the blend
 retains half of the linear calibration's error where the full correction was needed.
 Plain isotonic regression is therefore the estimator we recommend.
+
+\subsection{Datasets outside protein fitness}
+\label{app:domains}
+
+\Cref{tab:domains} reports the four additional datasets of
+\cref{sec:results-domains}, each the median over training fractions, seeds and budgets.
+Superconductor critical temperatures come from the UCI superconductivity set, solubility
+from the Delaney set using its six physical descriptors only, with its precomputed
+solubility prediction excluded so that no model output enters the features, the two
+toxicity endpoints from the UCI QSAR sets, and peptide activity from GRAMPA
+\citep{witten2019deep}, restricted to \emph{E. coli} and reduced to a median log
+concentration per sequence.
+
+\begin{table}[ht]
+\caption{Gap before and after conditional-mean recalibration outside protein fitness.
+Every median gap is positive. Isotonic regression improves all but the superconductor
+set, which has the highest surrogate accuracy and the smallest uncorrected gap.}
+\label{tab:domains}
+\vskip 0.1in
+\begin{center}
+\begin{small}
+\begin{tabular}{lrrrrr}
+\toprule
+dataset & cells & $\tau$ & reported & isotonic & $\rho$ \\
+\midrule
+superconductors & 25 & 0.68 & $0.097$ & $0.120$ & 0.84 \\
+solubility      & 20 & 0.89 & $0.156$ & $0.104$ & 0.83 \\
+peptides        & 25 & 0.97 & $1.270$ & $0.138$ & 0.40 \\
+aquatic toxicity & 15 & 1.22 & $0.114$ & $0.095$ & 0.67 \\
+fish toxicity   & 20 & 1.32 & $0.071$ & $0.066$ & 0.78 \\
+\midrule
+pooled          & 105 & --- & $0.385$ & $0.107$ & --- \\
+\bottomrule
+\end{tabular}
+\end{small}
+\end{center}
+\vskip -0.1in
+\end{table}
 
 \subsection{Full theory and simulation comparison}
 \label{app:fulltheory}
