@@ -1,0 +1,29 @@
+probeK -- does the gap survive a different surrogate? 195 assays, 4368 cells per model,
+572,416 rows. Identical splits across models. Calibration sweep 0.20/0.30/0.45.
+
+model  rho     raw_med   raw_mab  iso_mab  overpromise%
+ridge  0.594  +0.1637   0.2540   0.1112   86.4
+rf     0.501  -0.0149   0.1636   0.1029   16.7
+gbm    0.258  +0.4551   0.5145   0.1863   99.8
+knn    0.312  +0.1576   0.1959   0.1600   89.6
+
+calibration slice sweep (isotonic mean abs gap): 0.20 -> 0.1451, 0.30 -> 0.1422,
+0.45 -> 0.1367. Larger is mildly better; 0.30 is a reasonable default.
+
+HEADLINE: the gap is not an artifact of ridge. Three of the four surrogates overpromise
+in 86 to 99.8 percent of cells.
+
+THE RANDOM FOREST IS THE EXCEPTION AND THE THEORY PREDICTS IT. A forest output is an
+average over trees, so it already approximates E[y | x]; Proposition 3.1 says a
+conditional mean is unbiased on any selected subset. Its median gap is -0.015 and it
+overpromises in only 16.7 percent of cells. This is the strongest single piece of
+evidence for the misspecification framing over the selection-bias framing: the one
+surrogate that is itself an average shows essentially no gap.
+
+THE GAP DOES NOT TRACK ACCURACY. Gradient boosting has the LOWEST rank accuracy
+(rho 0.258) and the LARGEST gap (+0.455); the random forest has middling accuracy
+(0.501) and no gap. So the gap is set by the form of the reported score, not by how
+well the model ranks, which is what Corollary 3.3 asserts.
+
+Isotonic recalibration helps every surrogate: ridge 0.254 -> 0.111, rf 0.164 -> 0.103,
+gbm 0.515 -> 0.186, knn 0.196 -> 0.160.

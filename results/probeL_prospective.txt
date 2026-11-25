@@ -1,0 +1,30 @@
+probeL -- prospective tau on REAL assays, leave-one-assay-out. 202 assays, 1509 cells.
+Each rule is fitted on 201 assays and evaluated on the held-out one.
+
+rule       mean MAE   beats-anchored comparison
+free       0.1765     best
+pooled     0.1873
+anchored   0.2183
+zero       0.2483     worst (this is "trust the surrogate")
+
+anchored beats zero   on 114/202 assays, log10p -3.3, mae ratio 1.14   (anchored better)
+anchored beats pooled on  74/202 assays, log10p -3.5, mae ratio 0.81   (pooled better)
+anchored beats free   on  72/202 assays, log10p -5.7, mae ratio 0.81   (free better)
+
+CONTRADICTS THE SIMULATION. In simulation (12 synthetic families) the theory-anchored
+rule, with no intercept so the prediction vanishes at tau = 1, beat the free rule and
+beat assuming no gap (10/12, p = 0.005, 1.70x). On the 202 real assays the ordering
+reverses: the free rule is best and anchoring HURTS relative to both free and pooled.
+
+What survives: every tau-based rule beats trusting the surrogate. The free rule gives
+0.1765 against 0.2483 for assuming no gap, a factor of 1.41. So tau has real
+prospective value on real assays; the theory-derived zero constraint does not.
+
+Likely reason: on real assays the gap does not actually vanish at tau = 1. Finite
+samples, featurization error and surrogate accuracy contribute a baseline gap that the
+anchored form is forbidden from representing, so forcing the fit through the origin
+biases it.
+
+ACTION REQUIRED: the manuscript currently presents the anchored rule as the validated
+prescription, based on simulation only (section sec:results-synth). That passage must
+be corrected to report the real-assay ordering.

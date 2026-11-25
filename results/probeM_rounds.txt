@@ -1,0 +1,19 @@
+probeM -- does the gap close over successive design rounds? 3 rounds, K=20 per round,
+measured batch fed back into training each round, ridge surrogate, 5 seeds.
+
+round  n_train  rho     raw_med   raw_mab  iso_mab  overpromise%
+1      154      0.455  +0.2223   0.3023   0.1561   87.9
+2      174      0.470  +0.1811   0.2612   0.0930   89.9
+3      194      0.501  +0.1497   0.2218   0.0753   88.9
+
+HEADLINE: iterating does not fix it. Across three rounds the median gap shrinks from
+0.222 to 0.150, but the fraction of assays that overpromise stays flat near 89 percent.
+A team running repeated design rounds keeps overpromising at the same rate, with only a
+modest decline in magnitude.
+
+Isotonic recalibration remains effective and improves as the calibration slice grows,
+0.156 -> 0.093 -> 0.075.
+
+CAVEAT, do not overstate: training-set size, rank accuracy and the reference level all
+change together across rounds, so the modest shrink cannot be attributed to any one of
+them. The flat overpromise rate is the robust observation.
