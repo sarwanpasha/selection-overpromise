@@ -1,0 +1,53 @@
+Assay-level results over 202 assays (1509 assay, fraction and budget cells).
+Values are medians over assays unless marked mean. Gap normalized by the ceiling.
+
+probeQ and probeH agree exactly on the isotonic rule, which is the consistency check
+between the two runs: median 0.054, median absolute 0.062, mean absolute 0.088.
+
+rule                      median   med|.|   mean|.|   win vs reported   log10 p
+reported score             0.170    0.170     0.238        n/a            n/a
+linear recalibration       0.125    0.126     0.199         76            -14
+binned conditional mean   -0.080    0.081     0.171         57             -3
+Tweedie                   -0.997    0.997     1.905          1            -34
+isotonic                   0.054    0.062     0.088         80            -21
+cross-fitted isotonic      0.060    0.067     0.092         .              .
+tail-weighted isotonic     0.053    0.062     0.086         .              .
+
+isotonic beats linear on 75 percent of assays, log10 p -16.
+cross-fitted isotonic loses to plain isotonic (39 percent, log10 p -3).
+tail-weighted isotonic wins against plain isotonic on 76 percent (log10 p -11) with the
+same median absolute gap, so the two are equivalent in practice.
+
+Tail index computed on training measurements only (no held-out fitness):
+  spearman with the gap -0.396 (log10 p -57), against -0.401 (log10 p -59) for the
+  index computed on the whole assay. The prospective claim does not rest on leakage.
+
+By training fraction (median, mean, mean absolute of the gap, median sigma_n):
+  0.1   0.169  0.258  0.280  0.103
+  0.3   0.188  0.246  0.259  0.221
+  0.6   0.148  0.201  0.214  0.195
+The mean absolute gap falls with training data; the median does not. The half-split
+estimate of sigma_n is confounded by ridge shrinkage at small n and is not used.
+
+probeT, five splits, rules raw / linear / isotonic / cv-chosen / oracle.
+The oracle fits the conditional mean on the candidates themselves using their measured
+fitness, which an experimenter cannot do but an audit can.
+
+split   assays  rho     drift    median gap                     median |gap|
+rand     198    0.670   0.020    163  123   59  107   36        163  127   60  107   36
+pos      198    0.232   0.060    207   79  107   87   63        207  161  136  130   63
+aa       198    0.545  -0.314    164  -24 -167  -64   38        164  185  214  208   38
+low      198   -0.034  -0.688   -118 -133 -261 -179   28        151  157  261  186   28
+multi     56    0.574   0.422    741  715  437  703  103       1135 1119  947 1147  103
+
+Spearman between absolute calibration drift and the improvement isotonic recalibration
+delivers: -0.593, log10 p -239.
+
+Cross-validated choice among no correction, linear and isotonic picks, by split:
+  rand  raw 48  lin 24  iso 28
+  pos   raw 10  lin 44  iso 46
+  aa    raw 12  lin 43  iso 45
+  low   raw 43  lin 24  iso 33
+  multi raw 53  lin 26  iso 21
+It beats isotonic under the low fitness split (76 percent, log10 p -16) but loses under
+random splits (26 percent, log10 p -11), so it does not dominate and is not recommended.
