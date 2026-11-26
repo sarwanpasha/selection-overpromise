@@ -128,10 +128,30 @@ def t():
     line('TDRIFT_vs_gain', [int(round(1000 * r.statistic)),
          int(round(np.log10(r.pvalue))) if r.pvalue > 0 else -999])
 
+
+def h():
+    """probeH rules at assay level, so every row of the main table shares one convention."""
+    if not os.path.exists('probeH.csv'): return
+    d = pd.read_csv('probeH.csv'); d = d[d.ceiling > 1e-9]
+    a = assay_level(d, ['assay', 'frac', 'K'])
+    rules = ('raw', 'iso', 'bin', 'tweed')
+    s = {r: (a['fc_' + r] - a['realized']) / a['ceiling'] for r in rules}
+    print('=== H assays %d ===' % len(a), flush=True)
+    line('Hmed', [m1000(s[r]) for r in rules])
+    line('Habs', [m1000(s[r].abs()) for r in rules])
+    line('Habsmean', [int(round(1000 * float(s[r].abs().mean()))) for r in rules])
+    for r in ('iso', 'bin', 'tweed'):
+        da, db = s[r].abs(), s['raw'].abs()
+        try: p_ = wilcoxon(da, db).pvalue
+        except Exception: p_ = float('nan')
+        line('Hcmp_%s_raw' % r, [int(round(100 * float((da < db).mean()))),
+             int(round(np.log10(p_))) if np.isfinite(p_) and p_ > 0 else -999])
+    line('Hover_pct', [int(round(100 * float((s[r] > 0).mean()))) for r in rules])
+
 if __name__ == '__main__':
     print('ORDER rules: raw lin iso cviso tailiso', flush=True)
     print('S_<acq>: raw_med iso_med lin_med captured win% log10p', flush=True)
-    for f in (q, r, s_, t):
+    for f in (q, h, r, s_, t):
         try: f()
         except Exception as e: print('FAIL', f.__name__, type(e).__name__, e, flush=True)
     print('COMPACT_DONE', flush=True)
