@@ -1,0 +1,20 @@
+Probe S: the gap under Bayesian-optimization acquisition rules.
+Assay-level medians, gap normalized by the ceiling, scaled by 1000.
+Columns: reported score, isotonic, linear, fraction of ceiling captured,
+isotonic win percent against the reported score, log10 p.
+
+greedy  169  62  127  520  77  -19
+ucb1    170  60  133  512  78  -20
+ucb2    171  62  140  497  75  -19
+ei      171  66  144  495  74  -18
+ts       85  27   52  370  76  -17
+
+Reading:
+- every acquisition rule overpromises by about the same amount as greedy top-K, so the
+  gap is not an artifact of greedy selection.
+- isotonic recalibration removes most of it under every rule, winning 74 to 78 percent
+  of assays at p near 1e-18.
+- greedy captures the largest share of the achievable gain, 0.520, so the exploration
+  rules trade immediate gain for coverage, as expected; Thompson sampling captures the
+  least at 0.370 and also shows the smallest gap, consistent with a selection that is
+  less concentrated at the top of the score.
