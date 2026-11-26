@@ -573,18 +573,6 @@ which the surrogate does not see.
 \section{Results}
 \label{sec:results}
 
-\subsection{The theory matches simulation}
-\label{sec:results-sim}
-
-We first check \cref{eq:main} against direct simulation. For four fitness shapes, a
-linear $G_{\!f}$, a saturating one, a bimodal one that mimics the dead and functional
-clusters typical of deep mutational scanning, and one with an extended upper tail, we
-draw $200{,}000$ candidates, fit the calibrated predictor, select the top $2\%$, and
-average the shortfall over repeated draws. \Cref{tab:theory} in \cref{app:fulltheory} compares the result with \cref{eq:main}
-truncated at $k=8$. Agreement is within $1$ to $3\%$ except at the largest accuracy for the bimodal shape,
-where truncating the Hermite series at $k=8$ leaves a visible remainder. The linear row
-reproduces \cref{cor:gaussian} to simulation precision.
-
 \subsection{Surrogates overpromise on real assays}
 \label{sec:results-gap}
 
@@ -602,31 +590,6 @@ only $0.14$ for surrogates with $\rho$ between $0.8$ and $0.9$. A model whose he
 correlation would place it near the top of a leaderboard still shares roughly one in
 seven of its choices with the ideal batch.
 
-\begin{table}[t]
-\caption{Normalized shortfall $s$ and overlap between the selected batch and the true
-best batch, by held-out Spearman correlation $\rho$. Overlap is the fraction of the
-$20$ selected variants that are among the $20$ best.}
-\label{tab:byrho}
-\vskip 0.1in
-\begin{center}
-\begin{small}
-\begin{tabular}{lrrr}
-\toprule
-$\rho$ & cells & $s$ & overlap \\
-\midrule
-$0.0$--$0.3$ & 20  & 0.053 & 0.01 \\
-$0.3$--$0.5$ & 93  & 0.167 & 0.02 \\
-$0.5$--$0.6$ & 81  & 0.260 & 0.07 \\
-$0.6$--$0.7$ & 124 & 0.241 & 0.08 \\
-$0.7$--$0.8$ & 169 & 0.215 & 0.12 \\
-$0.8$--$0.9$ & 110 & 0.243 & 0.14 \\
-$0.9$--$1.0$ & 10  & 0.149 & 0.23 \\
-\bottomrule
-\end{tabular}
-\end{small}
-\end{center}
-\vskip -0.1in
-\end{table}
 
 \subsection{Tail compression predicts the shortfall and its sign}
 \label{sec:results-tau}
@@ -640,46 +603,21 @@ from both variables by linear regression and correlate the residuals, which give
 $-0.135$ with $p = 8 \times 10^{-4}$. The association is not a restatement of model
 quality.
 
-\Cref{tab:tau} shows the relationship directly. The shortfall falls monotonically as
+\Cref{tab:tau} and the lower panel of \cref{fig:main} show the relationship directly,
+and the upper panel shows the contrast with accuracy. The shortfall falls monotonically as
 the upper tail lengthens, from $0.298$ of the achievable gain in the most compressed
 group to $0.019$ in the most extended one. The predicted reversal appears in the last
 two rows: the proportion of cells where the surrogate underpromises rises from $0\%$ to
 $42\%$.
 
-\begin{table}[t]
-\caption{Normalized shortfall by tail-compression index $\tau$ from \cref{eq:tau}.
-Lower $\tau$ means a more compressed upper tail. The last column gives the proportion
-of cells with a negative shortfall, where the surrogate underpromises.}
-\label{tab:tau}
-\vskip 0.1in
-\begin{center}
-\begin{small}
-\begin{tabular}{lrrrr}
-\toprule
-$\tau$ & cells & $s$ & $\rho$ & underpromise \\
-\midrule
-$<0.60$        & 115 & $+0.298$ & 0.78 & \phantom{0}3\% \\
-$0.60$--$0.75$ & 158 & $+0.265$ & 0.75 & \phantom{0}2\% \\
-$0.75$--$0.90$ & 113 & $+0.261$ & 0.67 & \phantom{0}0\% \\
-$0.90$--$1.05$ & 81  & $+0.191$ & 0.63 & \phantom{0}4\% \\
-$1.05$--$1.40$ & 81  & $+0.129$ & 0.62 & 12\% \\
-$\ge 1.40$     & 59  & $+0.019$ & 0.54 & 42\% \\
-\bottomrule
-\end{tabular}
-\end{small}
-\end{center}
-\vskip -0.1in
-\end{table}
 
 \subsection{The pattern across assay types}
 \label{sec:results-class}
 
-Grouping assays by functional label gives the same picture in biological terms.
-Binding assays are closest to Gaussian, with median $\tau = 1.011$, and carry the
-smallest shortfall at $0.124$, while expression assays are the most compressed, at
-$\tau = 0.843$, and the worst affected, at $0.325$. Since $\tau$ compresses the whole
-Hermite spectrum into one number it does not order the classes perfectly, but the
-extremes behave as \cref{eq:main} requires \mbox{(\cref{app:class})}.
+Grouping assays by functional label gives the same picture in biological terms. Binding
+assays are closest to Gaussian, with median $\tau = 1.011$ and the smallest shortfall at
+$0.124$, while expression assays are the most compressed at $\tau = 0.843$ and the worst
+affected at $0.325$ \mbox{(\cref{app:class})}.
 
 Individual assays show the pattern more sharply. The SARS-CoV-2 spike receptor binding
 domain has the most compressed tail in the benchmark, $\tau = 0.43$, and overstates the
@@ -701,14 +639,26 @@ rule reduces realized gain, by $0.014$ to $0.080$ of the achievable gain, winnin
 most $23\%$ of comparisons. The baseline concentrates on those positions because that
 is where the strong variants are.
 
+Replacing greedy selection with an acquisition function does not change the picture
+either. With the ridge posterior, upper confidence bounds at one and two standard
+deviations, expected improvement, and Thompson sampling leave median gaps of $0.170$,
+$0.171$, $0.171$, and $0.085$ against $0.169$ for greedy selection, and isotonic
+recalibration removes most of the gap under each, winning on $74$ to $78\%$ of assays.
+Greedy selection also captures the largest share of the achievable gain, $0.520$
+against $0.370$ for Thompson sampling (\cref{app:acq}).
+
 
 \subsection{Simulation confirms the theory and validates the statistic}
 \label{sec:results-synth}
 
-Real assays cannot test the theory's null, because no assay is exactly Gaussian. We
-therefore sweep fitness shape directly, drawing $y = \sinh(\operatorname{arcsinh}(z) /
-\delta)$ for $\delta$ from $0.6$ to $3.0$ at accuracies $\rho$ from $0.5$ to $0.9$.
-\Cref{fig:synth} shows the gap crossing zero at $\tau = 1$, as \cref{cor:gaussian}
+Real assays cannot test the theory's null, because no assay is exactly Gaussian, so we
+sweep fitness shape directly. For a linear $G_{\!f}$, a saturating one, a bimodal one
+that mimics the dead and functional clusters typical of deep mutational scanning, and
+one with an extended upper tail, \cref{eq:main} truncated at $k = 8$ agrees with direct
+simulation to within $1$ to $3\%$, and the linear shape reproduces \cref{cor:gaussian}
+to simulation precision (\cref{app:fulltheory}). Sweeping shape continuously, with $y = \sinh(\operatorname{arcsinh}(z) /
+\delta)$ for $\delta$ from $0.6$ to $3.0$ at accuracies $\rho$ from $0.5$ to $0.9$, \cref{fig:synth}
+shows the gap crossing zero at $\tau = 1$, as \cref{cor:gaussian}
 requires, running from $-0.125$ at $\tau = 1.59$ to $+0.129$ at $\tau = 0.75$, and
 growing with accuracy from $0.049$ at $\rho = 0.5$ to $0.151$ at $\rho = 0.9$, which is
 \cref{cor:saturation} in numbers. Across twelve unrelated distributions the rank
@@ -723,35 +673,6 @@ $0.248$ for assuming no gap, which is what trusting the surrogate amounts to.
 \Cref{app:shapes} reports the pooled and theory-anchored variants, neither of which
 improves on it.
 
-\begin{figure}[t]
-\vskip 0.1in
-\begin{center}
-\begin{tikzpicture}
-\begin{axis}[
-  width=0.95\columnwidth, height=3.5cm,
-  xlabel={$\tau$}, ylabel={gap / ceiling},
-  label style={font=\small}, tick label style={font=\small},
-  legend style={font=\small, draw=none, at={(0.97,0.95)}, anchor=north east},
-  axis lines=left, xmin=0.68, xmax=1.68, ymin=-0.16, ymax=0.17,
-]
-\addplot[black!45, dashed, forget plot] coordinates {(0.68,0) (1.68,0)};
-\addplot[mark=*, thick, color=red!65!black] coordinates {
-  (0.747,0.1292) (0.777,0.1140) (0.817,0.0850) (0.882,0.0565)
-  (0.999,-0.0025) (1.176,-0.0592) (1.595,-0.1249)};
-\addlegendentry{reported score}
-\addplot[mark=square*, thick, color=blue!60!black] coordinates {
-  (0.747,0.0088) (0.777,0.0216) (0.817,0.0147) (0.882,0.0279)
-  (0.999,0.0281) (1.176,0.0279) (1.595,0.0286)};
-\addlegendentry{conditional mean}
-\end{axis}
-\end{tikzpicture}
-\end{center}
-\caption{Median gap against the tail-compression index over the shape sweep. The
-reported score crosses zero at $\tau = 1$ and reverses sign, while the estimated
-conditional mean stays near zero throughout.}
-\label{fig:synth}
-\vskip -0.15in
-\end{figure}
 
 \subsection{Estimating the conditional mean repairs the forecast}
 \label{sec:results-condmean}
@@ -803,6 +724,53 @@ Tweedie need not be monotone, so it can also reorder candidates; used that way i
 moves realized gain by a median of $-0.637$ and wins in $0.5\%$ of combinations, as
 \cref{cor:monotone} leads one to expect of a rule that perturbs an ordering without
 adding information.
+
+\subsection{The correction under distribution shift}
+\label{sec:results-shift}
+
+Random splits leave the candidates exchangeable with the calibration slice, which is
+the condition \cref{prop:tower} needs. Campaigns extrapolate, so we repeat the
+experiment on four shifted splits of the same assays: positions held out, so that every
+candidate mutates a site with no training measurement; mutant amino acids held out;
+training confined to the lower $60\%$ of the fitness range; and training on single
+substitutions with candidates carrying two or more, the combinatorial design case.
+\Cref{tab:shift} reports the result.
+
+The gap is largest where design is hardest. Candidates carrying multiple substitutions
+overstate the achievable gain by a median of $0.741$, four times the value under random
+splits, and candidates at unseen positions by $0.207$. Isotonic recalibration improves
+the forecast in both, cutting the median absolute gap from $1.135$ to $0.947$ and from
+$0.207$ to $0.136$, and winning on $64\%$ of assays in each. The other two splits
+behave differently. With amino acids held out the reported score is already close to
+unbiased and recalibration overshoots, raising the median absolute gap to $0.214$. With
+training confined to the lower fitness range the rank accuracy of the surrogate
+collapses to $-0.034$, the forecast underpromises, and every correction makes it worse. The pattern follows \cref{prop:tower} rather than
+contradicting it, since a calibration slice identifies the conditional mean under the
+distribution it is drawn from, which is the distribution the batch comes from in the
+first two splits and not in the last two.
+
+\begin{table}[t]
+\caption{Median absolute gap under shifted splits, normalized by the achievable gain,
+over $198$ assays and $56$ for the multiple substitution split. $\rho$ is the median
+held-out rank accuracy.}
+\label{tab:shift}
+\vskip 0.1in
+\begin{center}
+\begin{small}
+\begin{tabular}{lrrrr}
+\toprule
+split & $\rho$ & reported & linear & isotonic \\
+\midrule
+positions held out   & $\phantom{-}0.23$ & $0.207$ & $0.161$ & $0.136$ \\
+amino acids held out & $\phantom{-}0.55$ & $0.164$ & $0.185$ & $0.214$ \\
+low fitness only     & $-0.03$ & $0.151$ & $0.157$ & $0.261$ \\
+singles to multiples & $\phantom{-}0.57$ & $1.135$ & $1.119$ & $0.947$ \\
+\bottomrule
+\end{tabular}
+\end{small}
+\end{center}
+\vskip -0.1in
+\end{table}
 
 \subsection{The gap follows the form of the score, not its accuracy}
 \label{sec:results-form}
@@ -858,10 +826,10 @@ and the one family that does change the batch makes it worse. Effort spent corre
 the forecast is well spent; effort spent reordering the library on the same surrogate
 scores is not.
 
-The size of the gap has a practical reading. A surrogate with held-out correlation near
-$0.85$ still delivers about three quarters of what it promises, so budgeting a campaign
-on the predicted gain overstates progress per round by a margin that does not shrink as
-models improve and that \cref{eq:tau} lets a team estimate from pilot measurements.
+A surrogate with held-out correlation near $0.85$ still delivers about three quarters
+of what it promises, so budgeting a campaign on the predicted gain overstates progress
+per round by a margin that does not shrink as models improve and that \cref{eq:tau}
+lets a team estimate from pilot measurements.
 
 One feature of the data is not explained by \cref{eq:main} alone. The theory makes the
 gap grow with accuracy for a fixed shape, while \cref{tab:byrho} is nearly flat above
@@ -877,9 +845,9 @@ Model-guided design selects candidates at the top of a predicted ranking, and th
 predicted value of that batch overstates what it delivers by an amount set by the shape
 of the fitness distribution and the form of the reported score rather than by the
 accuracy of the model. The gap holds near a quarter of the achievable gain on $217$
-deep mutational scanning assays, persists across surrogate families and in materials,
-small-molecule, and peptide data, and is absent only for a surrogate whose output is
-already an average. A statistic of the measured fitness values forecasts it before any
+deep mutational scanning assays, persists across surrogate families, acquisition rules,
+and other domains, and is absent only for a surrogate whose output is already an
+average. A statistic of the measured fitness values forecasts it before any
 model is fit, and isotonic estimation of the conditional mean removes most of it
 without changing the selected batch.
 
@@ -1049,6 +1017,62 @@ rule & median $\Delta$ & wins & $p$ \\
 \vskip -0.1in
 \end{table}
 
+\subsection{Shortfall by accuracy and by tail compression}
+\label{app:strata}
+
+\Cref{tab:byrho} and \cref{tab:tau} give the groupings plotted in \cref{fig:main}.
+
+\begin{table}[ht]
+\caption{Normalized shortfall $s$ and overlap between the selected batch and the true
+best batch, by held-out Spearman correlation $\rho$. Overlap is the fraction of the
+$20$ selected variants that are among the $20$ best.}
+\label{tab:byrho}
+\vskip 0.1in
+\begin{center}
+\begin{small}
+\begin{tabular}{lrrr}
+\toprule
+$\rho$ & cells & $s$ & overlap \\
+\midrule
+$0.0$--$0.3$ & 20  & 0.053 & 0.01 \\
+$0.3$--$0.5$ & 93  & 0.167 & 0.02 \\
+$0.5$--$0.6$ & 81  & 0.260 & 0.07 \\
+$0.6$--$0.7$ & 124 & 0.241 & 0.08 \\
+$0.7$--$0.8$ & 169 & 0.215 & 0.12 \\
+$0.8$--$0.9$ & 110 & 0.243 & 0.14 \\
+$0.9$--$1.0$ & 10  & 0.149 & 0.23 \\
+\bottomrule
+\end{tabular}
+\end{small}
+\end{center}
+\vskip -0.1in
+\end{table}
+
+\begin{table}[ht]
+\caption{Normalized shortfall by tail-compression index $\tau$ from \cref{eq:tau}.
+Lower $\tau$ means a more compressed upper tail. The last column gives the proportion
+of cells with a negative shortfall, where the surrogate underpromises.}
+\label{tab:tau}
+\vskip 0.1in
+\begin{center}
+\begin{small}
+\begin{tabular}{lrrrr}
+\toprule
+$\tau$ & cells & $s$ & $\rho$ & underpromise \\
+\midrule
+$<0.60$        & 115 & $+0.298$ & 0.78 & \phantom{0}3\% \\
+$0.60$--$0.75$ & 158 & $+0.265$ & 0.75 & \phantom{0}2\% \\
+$0.75$--$0.90$ & 113 & $+0.261$ & 0.67 & \phantom{0}0\% \\
+$0.90$--$1.05$ & 81  & $+0.191$ & 0.63 & \phantom{0}4\% \\
+$1.05$--$1.40$ & 81  & $+0.129$ & 0.62 & 12\% \\
+$\ge 1.40$     & 59  & $+0.019$ & 0.54 & 42\% \\
+\bottomrule
+\end{tabular}
+\end{small}
+\end{center}
+\vskip -0.1in
+\end{table}
+
 \subsection{Simulation protocol}
 \label{app:sim-protocol}
 
@@ -1060,6 +1084,36 @@ The shape sweep uses the sinh-arcsinh family with $\delta \in \{0.6, 0.8, 1.0, 1
 1.7, 2.2, 3.0\}$ and $20$ seeds per cell, giving $2{,}100$ cells. The heterogeneous
 study replaces that family with twelve fixed distributions obtained by applying their
 quantile functions to $\Phi(z)$, with $15$ seeds per cell.
+
+\begin{figure}[ht]
+\vskip 0.1in
+\begin{center}
+\begin{tikzpicture}
+\begin{axis}[
+  width=0.95\columnwidth, height=3.5cm,
+  xlabel={$\tau$}, ylabel={gap / ceiling},
+  label style={font=\small}, tick label style={font=\small},
+  legend style={font=\small, draw=none, at={(0.97,0.95)}, anchor=north east},
+  axis lines=left, xmin=0.68, xmax=1.68, ymin=-0.16, ymax=0.17,
+]
+\addplot[black!45, dashed, forget plot] coordinates {(0.68,0) (1.68,0)};
+\addplot[mark=*, thick, color=red!65!black] coordinates {
+  (0.747,0.1292) (0.777,0.1140) (0.817,0.0850) (0.882,0.0565)
+  (0.999,-0.0025) (1.176,-0.0592) (1.595,-0.1249)};
+\addlegendentry{reported score}
+\addplot[mark=square*, thick, color=blue!60!black] coordinates {
+  (0.747,0.0088) (0.777,0.0216) (0.817,0.0147) (0.882,0.0279)
+  (0.999,0.0281) (1.176,0.0279) (1.595,0.0286)};
+\addlegendentry{conditional mean}
+\end{axis}
+\end{tikzpicture}
+\end{center}
+\caption{Median gap against the tail-compression index over the shape sweep. The
+reported score crosses zero at $\tau = 1$ and reverses sign, while the estimated
+conditional mean stays near zero throughout.}
+\label{fig:synth}
+\vskip -0.15in
+\end{figure}
 
 \subsection{Tail-compression index across unrelated distributions}
 \label{app:shapes}
@@ -1278,6 +1332,47 @@ $0.75$--$0.90$ & 285 & $0.223$ & $0.165$ \\
 $0.90$--$1.05$ & 234 & $0.159$ & $0.092$ \\
 $1.05$--$1.40$ & 264 & $0.099$ & $0.006$ \\
 $\ge 1.40$     & 165 & $0.021$ & $-0.021$ \\
+\bottomrule
+\end{tabular}
+\end{small}
+\end{center}
+\vskip -0.1in
+\end{table}
+
+\subsection{Acquisition rules and shifted splits}
+\label{app:acq}
+
+\Cref{tab:acq} gives the acquisition comparison of \cref{sec:results-fix} over $202$
+assays on identical splits, with the ridge posterior supplying the predictive standard
+deviation. Thompson sampling selects a less concentrated batch, which both lowers the
+share of the achievable gain it captures and reduces the gap, as \cref{thm:main}
+implies for a selection that reaches less far into the tail.
+
+For the shifted splits of \cref{sec:results-shift}, the positions and amino acids are
+divided in half at random and resampled over $5$ seeds, the low fitness split trains on
+the lowest $60\%$ of measured variants, and the multiple substitution split trains on
+every single substitution and selects among variants carrying two or more, with
+features summed over the constituent substitutions. Cross-fitted and tail-weighted
+isotonic behave like plain isotonic throughout, with median absolute gaps of $0.143$
+and $0.134$ for positions held out and $0.959$ and $0.951$ for multiple substitutions.
+
+\begin{table}[ht]
+\caption{Median gap and share of the achievable gain captured, by acquisition rule.
+The win rate compares the absolute gap of isotonic recalibration against the reported
+score at assay level.}
+\label{tab:acq}
+\vskip 0.1in
+\begin{center}
+\begin{small}
+\begin{tabular}{lrrrr}
+\toprule
+rule & reported & isotonic & captured & win \\
+\midrule
+greedy               & $0.169$ & $0.062$ & $0.520$ & $77\%$ \\
+UCB, $1\sigma$       & $0.170$ & $0.060$ & $0.512$ & $78\%$ \\
+UCB, $2\sigma$       & $0.171$ & $0.062$ & $0.497$ & $75\%$ \\
+expected improvement & $0.171$ & $0.066$ & $0.495$ & $74\%$ \\
+Thompson sampling    & $0.085$ & $0.027$ & $0.370$ & $76\%$ \\
 \bottomrule
 \end{tabular}
 \end{small}
