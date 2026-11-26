@@ -1220,7 +1220,7 @@ The advantage does not carry over to real assays. On the same splits as
 \cref{sec:results-condmean}, where calibration slices hold a few hundred points and the
 tail window must widen to the top $20\%$ of scores, the tail-weighted variant reaches a
 mean absolute gap of $0.125$ against $0.100$ for isotonic regression and $0.245$ for the
-reported score, and isotonic regression is the better of the two in $71.7\%$ of
+reported score, all per cell, and isotonic regression is the better of the two in $71.7\%$ of
 combinations ($p = 10^{-35}$). The learned weight averages $0.50$, so the blend
 retains half of the linear calibration's error where the full correction was needed.
 Plain isotonic regression is therefore the estimator we recommend.
@@ -1286,7 +1286,9 @@ the observations for $\tau$ above $0.75$.
 
 \begin{table}[ht]
 \caption{The gap under four surrogates on identical splits. The random forest, whose
-prediction is an average of training responses, is the only one without a gap.}
+prediction is an average of training responses, is the only one without a gap. These
+columns are per-cell statistics, so they differ slightly from the assay-level figures
+of \cref{tab:condmean}.}
 \label{tab:surrogates}
 \vskip 0.1in
 \begin{center}
