@@ -76,8 +76,9 @@ is long. On $217$ deep mutational scanning assays we find that $93\%$ of assays
 overpromise, that the gap holds near $23\%$ of the achievable gain across surrogate
 accuracies from $0.5$ to $0.9$, and that a one-line statistic of the fitness
 distribution predicts the gap and its reversal, with the fraction of underpromising
-assays rising from $0\%$ to $42\%$ as the tail lengthens. The same gap appears in
-superconductors, small molecules and antimicrobial peptides. The diagnosis is
+assays rising from $0\%$ to $42\%$ as the tail lengthens. The same gap appears under
+protein language model surrogates and in superconductors, small molecules, and
+antimicrobial peptides. The diagnosis is
 constructive: estimating the conditional mean by isotonic regression on held-out data
 cuts the mean absolute gap from $0.245$ to $0.100$ and the median gap from $0.166$ to
 $0.057$, winning on $76\%$ of assay and budget combinations, while leaving the selected
@@ -126,7 +127,8 @@ values rather than regressed onto it, so the reported score carries the right or
 and the wrong magnitude. The gap measures exactly that discrepancy, which is why we
 call it a misspecification gap. Its size is governed by how far the fitness
 distribution departs from Gaussian in its upper tail, so it is a property of the assay
-rather than a deficiency of the fit, and improving rank accuracy does not remove it.
+and of the form of the score rather than a deficiency of the fit, and improving rank
+accuracy does not remove it.
 
 Reading the gap this way turns a diagnosis into a remedy. Because the gap is the
 distance between the reported score and a conditional mean, estimating that conditional
@@ -141,20 +143,21 @@ alone and before any model is fit, how large the uncorrected gap will be.
 Our contributions are as follows.
 
 \begin{itemize}
-\item We derive the expected gap between predicted and realized gain under top-$K$
-selection in closed form (\cref{thm:main}). The gap is a weighted sum of the Hermite
-coefficients of the fitness quantile transform, with weights set by the surrogate
-accuracy and the selection fraction.
-\item We show that the gap is exactly $0$ for every surrogate accuracy when fitness is
-Gaussian (\cref{cor:gaussian}), and that it converges to a nonzero constant as accuracy
-approaches a perfect ranking (\cref{cor:saturation}). A surrogate that orders all
-candidates correctly still overpromises.
-\item We define a scale-free index of upper-tail compression and show that it predicts
-both the size and the sign of the gap on real assays, including a reversal in which
-surrogates underpromise.
-\item We quantify the gap on $217$ deep mutational scanning assays, and we show that
-two families of post hoc correction, variance-based shrinkage and position-diverse
-batch selection, fail to recover gain, in the manner the theory predicts.
+\item We show that selection cannot bias a forecast that is a conditional mean
+(\cref{prop:tower}), and we derive the gap of a calibrated score in closed form
+(\cref{thm:main}). It is exactly $0$ at every accuracy when fitness is Gaussian
+(\cref{cor:gaussian}) and tends to a nonzero constant as accuracy approaches a perfect
+ranking (\cref{cor:saturation}).
+\item We define a scale-free index of upper-tail compression, computable before any
+model is fit, that predicts the size and sign of the gap and forecasts it on held-out
+assays better than trusting the surrogate.
+\item We quantify the gap on $217$ deep mutational scanning assays. It persists across
+surrogate families, grows when language-model scores raise accuracy, is absent for a
+random forest, whose output is an average, and appears in materials, small-molecule,
+and peptide data.
+\item We show that isotonic estimation of the conditional mean removes most of the gap
+without changing the selected batch, where binned, Tweedie, and conformal corrections
+do not, and that rules which rescale or diversify the selection fail to recover gain.
 \end{itemize}
 
 The rest of the paper is organized as follows. \Cref{sec:related} reviews work on
@@ -162,7 +165,8 @@ fitness prediction benchmarks, selection bias, and model-guided design.
 \Cref{sec:method} sets up the selection problem, states the main result and its
 corollaries, and defines the tail-compression index. \Cref{sec:setup} describes the
 assays, the surrogate, and the evaluation protocol. \Cref{sec:results} reports the
-measured gap, the test of the theory, and the two correction families.
+measured gap, the tests of the theory, the correction rules, and the results for other
+surrogates and other domains.
 \Cref{sec:discussion} discusses what the results change for practice, and
 \Cref{sec:conclusion} concludes.
 
@@ -513,8 +517,8 @@ benchmark metadata, one of activity, binding, expression, organismal fitness, or
 stability, which we use only for the breakdown in \cref{sec:results-class}.
 
 \paragraph{Surrogate.}
-The surrogate is deliberately simple, because the claim concerns selection rather than
-any particular architecture. Each variant is described by additive features: a one-hot
+The main surrogate is deliberately simple, because the claim concerns the form of the
+reported score rather than any particular architecture. Each variant is described by additive features: a one-hot
 indicator of the mutated position, one-hot indicators of the wild-type and mutant amino
 acids, the BLOSUM62 score of the substitution \citep{henikoff1992amino}, and signed
 differences in hydropathy \citep{kyte1982simple}, residue volume, and formal charge,
@@ -523,7 +527,9 @@ construction so that the model generalizes to position and amino acid combinatio
 has not seen. A one-hot encoding of the position and amino acid pair is degenerate on
 single-mutant data, since each pair is measured once, and collapses to the intercept.
 We fit ridge regression with the penalty chosen by cross-validation over $13$ values
-spanning $10^{-2}$ to $10^{4}$.
+spanning $10^{-2}$ to $10^{4}$. \Cref{sec:results-form} replaces it with a random
+forest, gradient boosting, nearest neighbors, and ridge with a zero-shot language model
+score appended, on identical splits.
 
 \paragraph{Protocol.}
 For each assay we draw a random split into a training fraction and a held-out
@@ -543,7 +549,9 @@ on the same slice; \textsc{shrink} shrinks predictions toward the training media
 proportion to predictive variance. The second family changes which candidates are
 chosen. Because ridge errors are correlated within a position, the rules
 \textsc{cap}$m$ select greedily by prediction while allowing at most $m$ variants per
-position, for $m \in \{1,2,3\}$, with \textsc{half} capping at $\max(1, K/10)$.
+position, for $m \in \{1,2,3\}$, with \textsc{half} capping at $\max(1, K/10)$. Rules that alter only the forecast,
+including isotonic regression, are fitted on the last $30\%$ of the training part,
+which the surrogate does not see.
 
 \section{Results}
 \label{sec:results}
@@ -555,37 +563,8 @@ We first check \cref{eq:main} against direct simulation. For four fitness shapes
 linear $G_{\!f}$, a saturating one, a bimodal one that mimics the dead and functional
 clusters typical of deep mutational scanning, and one with an extended upper tail, we
 draw $200{,}000$ candidates, fit the calibrated predictor, select the top $2\%$, and
-average the shortfall over repeated draws. \Cref{tab:theory} compares the result with
-\cref{eq:main} truncated at $k=8$.
-
-\begin{table}[t]
-\caption{Shortfall predicted by \cref{eq:main} against simulation, for four fitness
-shapes and four accuracies. Linear fitness gives zero at every accuracy, and the
-extended tail gives a negative shortfall, meaning the surrogate underpromises.}
-\label{tab:theory}
-\vskip 0.1in
-\begin{center}
-\begin{small}
-\begin{tabular}{lcccc}
-\toprule
-$G_{\!f}$ & $\rho_\star$ & theory & simulation \\
-\midrule
-extended tail & 0.60 & $-0.393$ & $-0.399$ \\
-extended tail & 0.85 & $-0.910$ & $-0.906$ \\
-linear        & 0.60 & $\phantom{-}0.000$ & $-0.001$ \\
-linear        & 0.85 & $\phantom{-}0.000$ & $\phantom{-}0.001$ \\
-bimodal       & 0.60 & $\phantom{-}0.112$ & $\phantom{-}0.115$ \\
-bimodal       & 0.85 & $\phantom{-}0.360$ & $\phantom{-}0.334$ \\
-saturating    & 0.60 & $\phantom{-}0.273$ & $\phantom{-}0.272$ \\
-saturating    & 0.85 & $\phantom{-}0.594$ & $\phantom{-}0.590$ \\
-\bottomrule
-\end{tabular}
-\end{small}
-\end{center}
-\vskip -0.1in
-\end{table}
-
-Agreement is within $1$ to $3\%$ except at the largest accuracy for the bimodal shape,
+average the shortfall over repeated draws. \Cref{tab:theory} in \cref{app:fulltheory} compares the result with \cref{eq:main}
+truncated at $k=8$. Agreement is within $1$ to $3\%$ except at the largest accuracy for the bimodal shape,
 where truncating the Hermite series at $k=8$ leaves a visible remainder. The linear row
 reproduces \cref{cor:gaussian} to simulation precision.
 
@@ -800,7 +779,7 @@ against the reported score by a paired Wilcoxon signed-rank test.}
 \toprule
 rule & median & mean $|\cdot|$ & win & $p$ \\
 \midrule
-reported score & $0.166$ & $0.245$ & --- & --- \\
+reported score & $0.166$ & $0.245$ & n/a & n/a \\
 isotonic       & $0.057$ & $0.100$ & $75.7\%$ & $10^{-120}$ \\
 binned         & $-0.081$ & $0.177$ & $62.3\%$ & $10^{-21}$ \\
 Tweedie        & $-1.270$ & $2.690$ & $1.6\%$ & $10^{-246}$ \\
@@ -1175,7 +1154,7 @@ peptides        & 25 & 0.97 & $1.270$ & $0.138$ & 0.40 \\
 aquatic toxicity & 15 & 1.22 & $0.114$ & $0.095$ & 0.67 \\
 fish toxicity   & 20 & 1.32 & $0.071$ & $0.066$ & 0.78 \\
 \midrule
-pooled          & 105 & --- & $0.385$ & $0.107$ & --- \\
+pooled          & 105 & n/a & $0.385$ & $0.107$ & n/a \\
 \bottomrule
 \end{tabular}
 \end{small}
@@ -1303,6 +1282,33 @@ $\ge 1.40$     & 165 & $0.021$ & $-0.021$ \\
 \cref{eq:main} and simulation is $0.013$ in fitness units, with the largest single
 discrepancy $0.098$ at $\rho_\star = 1.0$ for the bimodal shape, attributable to series
 truncation as described in \cref{app:trunc}.
+
+\begin{table}[ht]
+\caption{Shortfall predicted by \cref{eq:main} against simulation, for four fitness
+shapes and four accuracies. Linear fitness gives zero at every accuracy, and the
+extended tail gives a negative shortfall, meaning the surrogate underpromises.}
+\label{tab:theory}
+\vskip 0.1in
+\begin{center}
+\begin{small}
+\begin{tabular}{lcccc}
+\toprule
+$G_{\!f}$ & $\rho_\star$ & theory & simulation \\
+\midrule
+extended tail & 0.60 & $-0.393$ & $-0.399$ \\
+extended tail & 0.85 & $-0.910$ & $-0.906$ \\
+linear        & 0.60 & $\phantom{-}0.000$ & $-0.001$ \\
+linear        & 0.85 & $\phantom{-}0.000$ & $\phantom{-}0.001$ \\
+bimodal       & 0.60 & $\phantom{-}0.112$ & $\phantom{-}0.115$ \\
+bimodal       & 0.85 & $\phantom{-}0.360$ & $\phantom{-}0.334$ \\
+saturating    & 0.60 & $\phantom{-}0.273$ & $\phantom{-}0.272$ \\
+saturating    & 0.85 & $\phantom{-}0.594$ & $\phantom{-}0.590$ \\
+\bottomrule
+\end{tabular}
+\end{small}
+\end{center}
+\vskip -0.1in
+\end{table}
 
 
 \end{document}
