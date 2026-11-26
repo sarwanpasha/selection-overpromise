@@ -84,10 +84,42 @@ def s_():
                           m1000(a.realized / a.ceiling),
                           int(round(100 * float((si.abs() < sr.abs()).mean()))), lp])
 
+
+def t():
+    if not os.path.exists('probeT.csv'): return
+    d = pd.read_csv('probeT.csv'); d = d[d.ceiling > 1e-9]
+    rules = ('raw', 'lin', 'iso', 'auto', 'oracle')
+    print('ORDER T rules: raw lin iso auto oracle', flush=True)
+    for mode, m in d.groupby('mode'):
+        cell = m.groupby(['assay', 'K'], as_index=False).median(numeric_only=True)
+        a = cell.groupby('assay', as_index=False).median(numeric_only=True)
+        s = {k: (a['fc_' + k] - a['realized']) / a['ceiling'] for k in rules}
+        print('=== T %s assays %d rho %d drift %d ===' %
+              (mode, len(a), m1000(a.spearman), m1000(a.drift)), flush=True)
+        line('Tmed_' + mode, [m1000(s[k]) for k in rules])
+        line('Tabs_' + mode, [m1000(s[k].abs()) for k in rules])
+        for x, y in (('iso', 'raw'), ('auto', 'raw'), ('auto', 'iso'), ('auto', 'lin')):
+            da, db = s[x].abs(), s[y].abs()
+            try: p_ = wilcoxon(da, db).pvalue
+            except Exception: p_ = float('nan')
+            line('Tcmp_%s_%s_%s' % (mode, x, y),
+                 [int(round(100 * float((da < db).mean()))),
+                  int(round(np.log10(p_))) if np.isfinite(p_) and p_ > 0 else -999])
+        pk = m.drop_duplicates(['assay', 'K', 'seed']).pick.value_counts(normalize=True)
+        line('Tpick_' + mode, [int(round(100 * pk.get(k, 0.0))) for k in ('raw', 'lin', 'iso')])
+    cell = d.groupby(['assay', 'mode', 'K'], as_index=False).median(numeric_only=True)
+    gain = ((cell.fc_raw - cell.realized).abs() -
+            (cell.fc_iso - cell.realized).abs()) / cell.ceiling
+    ok = np.isfinite(gain) & np.isfinite(cell.drift)
+    from scipy.stats import spearmanr as sp
+    r = sp(cell.drift.abs()[ok], gain[ok])
+    line('TDRIFT_vs_gain', [int(round(1000 * r.statistic)),
+         int(round(np.log10(r.pvalue))) if r.pvalue > 0 else -999])
+
 if __name__ == '__main__':
     print('ORDER rules: raw lin iso cviso tailiso', flush=True)
     print('S_<acq>: raw_med iso_med lin_med captured win% log10p', flush=True)
-    for f in (q, r, s_):
+    for f in (q, r, s_, t):
         try: f()
         except Exception as e: print('FAIL', f.__name__, type(e).__name__, e, flush=True)
     print('COMPACT_DONE', flush=True)
