@@ -50,6 +50,18 @@ def q():
         line('Qtau_%s' % col, [int(round(1000 * r.statistic)),
                                int(round(np.log10(r.pvalue))) if r.pvalue > 0 else -999])
     line('Qlin_slope_pos_pct', [int(round(100 * float((cell.lin_slope > 0).mean())))])
+    # mean of |s| over assays, to sit alongside the medians
+    line('Qabsmean', [int(round(1000 * float(s[r].abs().mean()))) for r in rules])
+    line('Qmedmean', [int(round(1000 * float(s[r].mean()))) for r in rules])
+    # by training fraction, median and mean of the raw gap over cells
+    for f in (0.1, 0.3, 0.6):
+        c = cell[cell.frac == f]
+        sr = (c.fc_raw - c.realized) / c.ceiling
+        line('Qfrac_%s' % f, [int(round(1000 * float(sr.median()))),
+                              int(round(1000 * float(sr.mean()))),
+                              int(round(1000 * float(sr.abs().mean()))),
+                              int(round(1000 * float(c.sigma_n.median())))])
+    line('Qcells', [len(cell), int(cell.assay.nunique())])
 
 def r():
     if not os.path.exists('probeR.csv'): return
