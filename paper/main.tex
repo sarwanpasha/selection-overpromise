@@ -121,10 +121,11 @@ surrogate's own output, then the expected gap on any selected subset is exactly 
 no matter how extreme the selection. Selection alone therefore cannot produce a gap.
 
 What produces it is the discrepancy between the quantity a team reports and the
-conditional mean it is taken to be. Surrogates are tuned and benchmarked for rank
-accuracy, and their outputs are standardized to the scale of the training fitness
-values rather than regressed onto it, so the reported score carries the right ordering
-and the wrong magnitude. The gap measures exactly that discrepancy, which is why we
+conditional mean it is taken to be. A surrogate is fit to predict
+fitness from features, so its output estimates the conditional mean of fitness given
+those features, which is not the conditional mean given the output itself unless the
+fit is exact. Tuning and benchmarking for rank accuracy does nothing to close that
+difference, so the reported score carries the right ordering and the wrong magnitude. The gap measures exactly that discrepancy, which is why we
 call it a misspecification gap. Its size is governed by how far the fitness
 distribution departs from Gaussian in its upper tail, so it is a property of the assay
 and of the form of the score rather than a deficiency of the fit, and improving rank
@@ -143,9 +144,10 @@ alone and before any model is fit, how large the uncorrected gap will be.
 Our contributions are as follows.
 
 \begin{itemize}
-\item We show that selection cannot bias a forecast that is a conditional mean
-(\cref{prop:tower}), and we derive the gap of a calibrated score in closed form
-(\cref{thm:main}). It is exactly $0$ at every accuracy when fitness is Gaussian
+\item We separate selection from misspecification. A conditional-mean forecast is
+unbiased under any score-based selection (\cref{prop:tower}), which is the
+auto-calibration property and not new, and on that premise the gap of a calibrated
+score has a closed form (\cref{thm:main}). It is exactly $0$ at every accuracy when fitness is Gaussian
 (\cref{cor:gaussian}) and tends to a nonzero constant as accuracy approaches a perfect
 ranking (\cref{cor:saturation}).
 \item We define a scale-free index of upper-tail compression, computable before any
@@ -177,16 +179,15 @@ surrogates and other domains.
 Deep mutational scanning measures the functional effect of thousands of single amino
 acid substitutions in one experiment \citep{fowler2014deep}, and the accumulation of
 these datasets made systematic benchmarking possible. ProteinGym collects $217$
-substitution assays with a common interface and reports rank correlation together with
-top-$K$ recall and normalized discounted cumulative gain \citep{notin2023proteingym}.
+substitution assays and reports rank correlation, top-$K$ recall, and normalized
+discounted cumulative gain \citep{notin2023proteingym}.
 Models evaluated on it range from alignment-based methods \citep{hopf2017mutation,
 frazer2021disease} to protein language models trained on unaligned sequences
 \citep{rives2021biological, lin2023evolutionary, elnaggar2021prottrans,
 madani2023large}, hybrids that retrieve homologs at inference time
 \citep{notin2022tranception}, and structure-aware scorers \citep{meier2021language,
-cheng2023accurate}. Reported accuracy on these benchmarks has risen steadily, which
-makes the question of what that accuracy buys a design campaign more pressing rather
-than less.
+cheng2023accurate}. Accuracy on these benchmarks has risen steadily, which makes the
+question of what it buys a design campaign more pressing rather than less.
 
 \paragraph{From ranking quality to design outcomes.}
 Several authors have questioned whether leaderboard position transfers to design.
@@ -203,24 +204,29 @@ we give the departure in closed form.
 \paragraph{Model-guided design loops.}
 Machine learning guided directed evolution trains a surrogate on measured variants and
 proposes the next batch from its predictions \citep{yang2019machine, wu2019machine,
-biswas2021low}. Practical systems differ in how they balance exploitation against
-exploration \citep{hie2022adaptive, brookes2019conditioning, stanton2022accelerating}, how they construct libraries
-\citep{sinai2020adalead}, and how they handle batches
+biswas2021low}. Such systems differ in how they balance exploitation against exploration
+\citep{hie2022adaptive, brookes2019conditioning, stanton2022accelerating}, construct
+libraries \citep{sinai2020adalead}, and handle batches
 \citep{angermueller2020modelbased}. The same loop is studied without the wet lab as
 offline model-based optimization, where a fixed dataset must be turned into designs and
 the surrogate is known to be unreliable away from the data it was fit on
 \citep{trabucco2021coms, fannjiang2020autofocused}, and where a standard benchmark now
-exists \citep{trabucco2022designbench}. Those methods act on the ordering, by holding
-the surrogate down on out-of-distribution inputs or by refitting it as the search moves;
-the gap we study survives any such change because it concerns the number attached to the
-batch rather than the batch itself. A recurring observation is that candidates
+exists \citep{trabucco2022designbench}. Those methods act on the ordering, by holding the surrogate
+down on out-of-distribution inputs or by refitting it as the search moves; the gap we
+study survives any such change because it concerns the number attached to the batch
+rather than the batch itself. A recurring observation is that candidates
 predicted to be strong can differ substantially from those that measure strongly, and
 that quantifying uncertainty for designed candidates has to account for the feedback
 loop that produced them \citep{hsu2022learning, fannjiang2022conformal}. Our results explain part of that
 pattern and show that it does not disappear as the surrogate improves.
 
 \paragraph{Selection bias and the winner's curse.}
-That estimates conditioned on being extreme are biased is classical.
+That estimates conditioned on being extreme are biased is classical. In decision
+analysis it is the optimizer's curse: ranking alternatives by unbiased value estimates
+and acting on the best leaves one disappointed on average, and the remedy is to replace
+each estimate by its posterior mean \citep{smith2006optimizer}. \Cref{prop:tower} is
+that remedy stated for model-guided design, and we present it as the premise that makes
+the rest of the analysis precise rather than as a new result.
 In genetics the effect is known as the winner's curse: effect sizes for variants
 selected by significance are inflated, and a literature of corrections has grown around
 it \citep{goring2001large, zollner2007overcoming, zhong2008bias, palmer2017statistical,
@@ -245,9 +251,16 @@ Post hoc calibration adjusts predicted values so that they match observed outcom
 held-out data, through isotonic regression \citep{zadrozny2002transforming}, Platt
 scaling \citep{platt1999probabilistic}, temperature scaling
 \citep{guo2017calibration}, or conformal prediction \citep{vovk2005algorithmic,
-angelopoulos2023conformal}. Calibration is usually evaluated on the marginal
-distribution of predictions rather than on the selected subset, and
-\cref{sec:results} shows why that distinction matters here.
+angelopoulos2023conformal}. A forecast that equals the conditional mean of the outcome
+given its own value is called auto-calibrated, and isotonic regression is the standard
+device for imposing that property on a fitted regression function
+\citep{kruger2021generic, wuthrich2024isotonic}. Conformal methods have been adapted to
+selection, where the target is coverage or false discovery control on the selected
+units rather than the value of the batch \citep{jin2023selection}. Calibration is
+usually evaluated on the marginal distribution of predictions rather than on the
+selected subset, and \cref{sec:results} shows why that distinction matters here. The
+estimator we recommend is therefore not new; the measurement of what it recovers in
+design, and the theory that says how much there is to recover, are.
 
 \section{The Misspecification Gap}
 \label{sec:method}
@@ -305,7 +318,11 @@ G_{\!f}(z) = \sum_{k \ge 0} \frac{c_k}{k!}\, \He_k(z),
 \label{eq:hermite}
 \end{equation}
 so that $c_0 = \Exp[y]$ and $c_1 = \Exp[y z]$ measure the mean and the linear part,
-while $c_k$ for $k \ge 2$ measure departures from linearity.
+while $c_k$ for $k \ge 2$ measure departures from linearity. This basis is the natural
+one because the pair $(z, u)$ introduced below is bivariate normal, whose density
+Mehler's classical expansion diagonalizes in exactly these polynomials
+\citep{mehler1866ueber}. The tool is standard; what is new is the quantity we apply it
+to.
 
 The surrogate observes a noisy version of the latent variable. Let
 \begin{equation}
@@ -660,16 +677,15 @@ $\ge 1.40$     & 59  & $+0.019$ & 0.54 & 42\% \\
 Grouping assays by functional label gives the same picture in biological terms.
 Binding assays are closest to Gaussian, with median $\tau = 1.011$, and carry the
 smallest shortfall at $0.124$, while expression assays are the most compressed, at
-$\tau = 0.843$, and the worst affected, at $0.325$. The ordering by $\tau$ is not a
-perfect ordering by shortfall, since $\tau$ compresses the whole Hermite spectrum into
-one number, but the extremes behave as \cref{eq:main} requires. \Cref{app:class} gives
-the full breakdown.
+$\tau = 0.843$, and the worst affected, at $0.325$. Since $\tau$ compresses the whole
+Hermite spectrum into one number it does not order the classes perfectly, but the
+extremes behave as \cref{eq:main} requires \mbox{(\cref{app:class})}.
 
 Individual assays show the pattern more sharply. The SARS-CoV-2 spike receptor binding
 domain has the most compressed tail in the benchmark, $\tau = 0.43$, and overstates the
-achievable gain by $1.08$, more than the whole gain available, which recalibration
-brings to $0.09$; human ACE2, with the longest tail at $\tau = 1.86$, underpromises at
-$-0.06$. \Cref{tab:named} collects these cases, including one instructive exception.
+achievable gain by $1.08$, which recalibration brings to $0.09$; human ACE2, with the
+longest tail at $\tau = 1.86$, underpromises at $-0.06$. \Cref{tab:named} collects
+these cases, including one instructive exception.
 
 
 \subsection{Neither correction family recovers gain}
@@ -691,28 +707,21 @@ is where the strong variants are.
 
 Real assays cannot test the theory's null, because no assay is exactly Gaussian. We
 therefore sweep fitness shape directly, drawing $y = \sinh(\operatorname{arcsinh}(z) /
-\delta)$ for $\delta$ from $0.6$ to $3.0$, which moves the upper tail from extended to
-compressed, at accuracies $\rho$ from $0.5$ to $0.9$. \Cref{fig:synth} shows the
-result. The gap crosses zero at $\tau = 1$, as \cref{cor:gaussian} requires, and
-reverses sign on either side, running from $-0.125$ at $\tau = 1.59$ to $+0.129$ at
-$\tau = 0.75$. It also grows with accuracy rather than shrinking, from $0.049$ at
-$\rho = 0.5$ to $0.151$ at $\rho = 0.9$, which is \cref{cor:saturation} in numbers:
-a better surrogate overpromises more, not less.
+\delta)$ for $\delta$ from $0.6$ to $3.0$ at accuracies $\rho$ from $0.5$ to $0.9$.
+\Cref{fig:synth} shows the gap crossing zero at $\tau = 1$, as \cref{cor:gaussian}
+requires, running from $-0.125$ at $\tau = 1.59$ to $+0.129$ at $\tau = 0.75$, and
+growing with accuracy from $0.049$ at $\rho = 0.5$ to $0.151$ at $\rho = 0.9$, which is
+\cref{cor:saturation} in numbers. Across twelve unrelated distributions the rank
+correlation between $\tau$ and the median gap is $-0.909$ at $p = 4.2 \times 10^{-5}$,
+and under a hard upper ceiling the forecast overstates by $1.10$, more than the entire
+achievable gain (\cref{app:shapes}).
 
-The index is not an artifact of this one family. Across twelve unrelated
-distributions, among them lognormal, gamma, Student's $t$, bimodal, and a hard upper
-ceiling, the rank correlation between $\tau$ and the median gap is $-0.909$ at
-$p = 4.2 \times 10^{-5}$; under the ceiling, the case closest to a saturating assay,
-the forecast overstates by $1.10$, more than the entire achievable gain.
-
-The practical claim is prospective: $\tau$ is available before any model is fit, so it
-should forecast the gap on an assay not yet seen. Holding out each of the $202$ real
-assays in turn and fitting a linear rule in $\log \tau$ and $\rho$ on the rest predicts
-the held-out gap with mean absolute error $0.177$, against $0.187$ for a pooled mean
-and $0.248$ for assuming no gap, which is what trusting the surrogate amounts to.
-Constraining the rule to vanish at $\tau = 1$, as \cref{cor:gaussian} suggests and as
-helps on the synthetic families, is worse on real assays at $0.218$, because real
-assays retain a gap at $\tau = 1$ that the idealized model does not contain.
+The claim is prospective, since $\tau$ is available before any model is fit. Holding
+out each of the $202$ real assays in turn and fitting a linear rule in $\log \tau$ and
+$\rho$ on the rest predicts the held-out gap with mean absolute error $0.177$, against
+$0.248$ for assuming no gap, which is what trusting the surrogate amounts to.
+\Cref{app:shapes} reports the pooled and theory-anchored variants, neither of which
+improves on it.
 
 \begin{figure}[t]
 \vskip 0.1in
@@ -855,12 +864,11 @@ on the predicted gain overstates progress per round by a margin that does not sh
 models improve and that \cref{eq:tau} lets a team estimate from pilot measurements.
 
 One feature of the data is not explained by \cref{eq:main} alone. The theory makes the
-gap grow with accuracy for a fixed fitness shape, while \cref{tab:byrho} is nearly flat
-above $\rho = 0.5$, and the closed-form comparison of \cref{sec:results-form} leaves
-real assays with roughly $0.08$ more gap than the model near $\tau = 1$. A finite-sample
-term from fitting the score on limited measurements is the natural candidate, since the
-raw gap falls from $0.363$ to $0.232$ as the training fraction rises from $0.1$ to
-$0.6$ while the theoretical term is unchanged.
+gap grow with accuracy for a fixed shape, while \cref{tab:byrho} is nearly flat above
+$\rho = 0.5$, and \cref{sec:results-form} leaves real assays with roughly $0.08$ more
+gap than the model near $\tau = 1$. Fitting the score on limited measurements is the
+natural candidate, since the raw gap falls from $0.363$ to $0.232$ as the training
+fraction rises from $0.1$ to $0.6$ while the theoretical term is unchanged.
 
 \section{Conclusion}
 \label{sec:conclusion}
@@ -1060,8 +1068,11 @@ quantile functions to $\Phi(z)$, with $15$ seeds per cell.
 $-0.909$ quoted in \cref{sec:results-synth}. The Gaussian row is the control and sits
 at $-0.008$, and the truncated row is the saturating case. Holding out each distribution
 in turn, a linear rule in $\log \tau$ constrained to vanish at $\tau = 1$ predicts the
-held-out gap better than assuming no gap on $10$ of the $12$, at $p = 0.005$; as
-\cref{sec:results-synth} reports, that constraint does not help on real assays.
+held-out gap better than assuming no gap on $10$ of the $12$, at $p = 0.005$. That
+constraint does not help on real assays: against the leave-one-assay-out error of
+$0.177$ for the free rule quoted in \cref{sec:results-synth}, a pooled mean gives
+$0.187$ and the rule anchored to vanish at $\tau = 1$ gives $0.218$, because real
+assays retain a gap at $\tau = 1$ that the idealized model does not contain.
 
 \begin{table}[ht]
 \caption{Median tail-compression index and median normalized gap for the reported
