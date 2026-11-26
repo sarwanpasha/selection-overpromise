@@ -1,0 +1,22 @@
+Probe R: conditional-mean recalibration under covariate shift.
+Assay-level medians, gap normalized by ceiling, scaled by 1000 in the raw output.
+Rule order: raw, linear, isotonic, cross-fitted isotonic, tail-weighted isotonic.
+
+mode   assays  rho     median signed gap                  median |gap|
+pos    198     0.232   207   79  107  110  100            207  161  136  143  134
+aa     198     0.545   164  -24 -167 -163 -172            164  185  214  208  216
+low    198    -0.034  -118 -133 -261 -260 -261            151  157  261  260  261
+multi   56     0.574   741  715  437  453  436           1135 1119  947  959  951
+
+Paired comparisons (win percent of first over second, log10 p, assay level):
+pos    iso>raw 64 (-7)   lin>raw 62 (-4)   iso>lin 53 (-1)
+aa     iso>raw 47 (-1)   lin>raw 48 (-1)   iso>lin 45 ( 0)
+low    iso>raw 20 (-18)  lin>raw 34 (-?)   iso>lin 24 (-?)
+multi  iso>raw 64 (-3)   lin>raw 73 (-4)   iso>lin 59 (-2)
+
+Reading:
+- positions held out: gap 0.207, isotonic cuts it to 0.136, wins 64 percent.
+- singles to multiples: gap 0.741 of the ceiling, isotonic cuts it to 0.437, wins 64 percent.
+- amino acids held out: raw forecast already near zero bias; isotonic overcorrects to -0.167.
+- trained on the low fitness range: rank accuracy collapses to -0.034, the forecast
+  underpromises, and every correction makes it worse.
