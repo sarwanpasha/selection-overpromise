@@ -80,9 +80,9 @@ assays rising from $0\%$ to $42\%$ as the tail lengthens. The same gap appears u
 protein language model surrogates and in superconductors, small molecules, and
 antimicrobial peptides. The diagnosis is
 constructive: estimating the conditional mean by isotonic regression on held-out data
-cuts the mean absolute gap from $0.245$ to $0.100$ and the median gap from $0.166$ to
-$0.057$, winning on $76\%$ of assay and budget combinations, while leaving the selected
-batch and therefore the realized gain untouched.
+cuts the mean absolute gap from $0.238$ to $0.088$ and the median gap from $0.170$ to
+$0.054$, winning on $80\%$ of assays, while leaving the selected batch and therefore
+the realized gain untouched.
 \end{abstract}
 
 \section{Introduction}
@@ -477,7 +477,7 @@ by the nonlinear coefficients of $G_{\!f}$. \Cref{sec:results} tests both predic
 \begin{center}
 \begin{tikzpicture}
 \begin{axis}[
-  width=0.95\columnwidth, height=4.2cm,
+  width=0.95\columnwidth, height=3.0cm,
   xlabel={held-out Spearman $\rho$},
   ylabel={$s$},
   label style={font=\large}, tick label style={font=\large},
@@ -495,7 +495,7 @@ by the nonlinear coefficients of $G_{\!f}$. \Cref{sec:results} tests both predic
 
 \begin{tikzpicture}
 \begin{axis}[
-  width=0.95\columnwidth, height=4.2cm,
+  width=0.95\columnwidth, height=3.0cm,
   xlabel={tail-compression index $\tau$},
   ylabel={$s$},
   label style={font=\large}, tick label style={font=\large},
@@ -531,7 +531,7 @@ require at least $200$ usable variants, which leaves $205$ assays for the select
 experiments. Assays with more than $20{,}000$ variants are subsampled to $20{,}000$ at a
 fixed seed to bound computation. Every assay carries a coarse functional label in the
 benchmark metadata, one of activity, binding, expression, organismal fitness, or
-stability, which we use only for the breakdown in \cref{sec:results-class}.
+stability, which we use only for the breakdown in \cref{sec:results-tau}.
 
 \paragraph{Surrogate.}
 The main surrogate is deliberately simple, because the claim concerns the form of the
@@ -582,26 +582,24 @@ of $0.748$, so the median shortfall is $0.303$ and the median fraction of the ce
 captured is $0.578$. The median held-out Spearman correlation is $0.691$, which is
 comparable to what supervised models report on this benchmark.
 
-\Cref{tab:byrho} breaks the normalized shortfall down by surrogate accuracy. Two
-features stand out. The shortfall does not shrink as the surrogate improves: above
-$\rho = 0.5$ it stays between $0.21$ and $0.26$ of the achievable gain. The overlap
-between the selected batch and the true best batch stays small throughout, reaching
-only $0.14$ for surrogates with $\rho$ between $0.8$ and $0.9$. A model whose held-out
-correlation would place it near the top of a leaderboard still shares roughly one in
-seven of its choices with the ideal batch.
+\Cref{tab:byrho} breaks the shortfall down by surrogate accuracy, and two features
+stand out. It does not shrink as the surrogate improves, staying between $0.21$ and
+$0.26$ of the achievable gain above $\rho = 0.5$, and the overlap between the selected
+batch and the true best batch stays small throughout, reaching only $0.14$ at $\rho$
+between $0.8$ and $0.9$: a model that would sit near the top of a leaderboard still
+shares one choice in seven with the ideal batch.
 
 
 \subsection{Tail compression predicts the shortfall and its sign}
 \label{sec:results-tau}
 
 \Cref{eq:main} attributes the shortfall to nonlinearity of the fitness quantile
-transform, and \cref{eq:tau} summarizes the relevant nonlinearity in one number. Across
-$607$ assay and training-fraction cells covering $204$ assays, the Spearman correlation
+transform, and \cref{eq:tau} summarizes that nonlinearity in one number. Across $607$
+assay and training-fraction cells covering $204$ assays, the Spearman correlation
 between $\tau$ and the normalized shortfall is $-0.470$ with $p = 9.9 \times 10^{-35}$.
-Because $\tau$ and surrogate accuracy are themselves related, we also remove $\rho$
-from both variables by linear regression and correlate the residuals, which gives
-$-0.135$ with $p = 8 \times 10^{-4}$. The association is not a restatement of model
-quality.
+Removing $\rho$ from both variables by linear regression and correlating the residuals
+gives $-0.135$ with $p = 8 \times 10^{-4}$, so the association is not a restatement of
+model quality.
 
 \Cref{tab:tau} and the lower panel of \cref{fig:main} show the relationship directly,
 and the upper panel shows the contrast with accuracy. The shortfall falls monotonically as
@@ -610,9 +608,6 @@ group to $0.019$ in the most extended one. The predicted reversal appears in the
 two rows: the proportion of cells where the surrogate underpromises rises from $0\%$ to
 $42\%$.
 
-
-\subsection{The pattern across assay types}
-\label{sec:results-class}
 
 Grouping assays by functional label gives the same picture in biological terms. Binding
 assays are closest to Gaussian, with median $\tau = 1.011$ and the smallest shortfall at
@@ -671,7 +666,9 @@ out each of the $202$ real assays in turn and fitting a linear rule in $\log \ta
 $\rho$ on the rest predicts the held-out gap with mean absolute error $0.177$, against
 $0.248$ for assuming no gap, which is what trusting the surrogate amounts to.
 \Cref{app:shapes} reports the pooled and theory-anchored variants, neither of which
-improves on it.
+improves on it. Computing $\tau$ from the training measurements alone, with no held-out
+fitness, moves its correlation with the gap only from $-0.401$ to $-0.396$, so the
+statistic is genuinely available in advance.
 
 
 \subsection{Estimating the conditional mean repairs the forecast}
@@ -679,28 +676,31 @@ improves on it.
 
 \Cref{prop:tower} says the gap would vanish if the reported value were the conditional
 mean, so the direct test is to estimate that conditional mean and see whether it does.
-We fit three estimators of $m(\yhat)$ on a held-out slice of the training data only:
-isotonic regression, a binned conditional mean, and Efron's Tweedie correction
-\citep{efron2011tweedie}. Isotonic and binned are monotone, so by
-\cref{cor:monotone} they leave the batch and the realized gain exactly as they were and
-alter only the number attached to it.
+We fit four estimators of $m(\yhat)$ on a held-out slice of the training data only: a
+linear regression of fitness on the score, isotonic regression, a binned conditional
+mean, and Efron's Tweedie correction \citep{efron2011tweedie}. The first three are
+monotone, so by \cref{cor:monotone} they leave the batch and the realized gain exactly
+as they were and alter only the number attached to it.
 
-\Cref{tab:condmean} reports the outcome over $202$ assays and $1509$ assay and budget
-combinations. Isotonic regression cuts the mean absolute gap from $0.245$ to $0.100$
-and the median gap from $0.166$ to $0.057$, improving on the reported score in $75.7\%$
-of combinations. The binned estimator also improves on the mean absolute gap but
-overshoots in the other direction, leaving a median gap of $-0.081$ and underpromising
-in $83\%$ of combinations, because equal-count bins place too few points in the tail
-that selection actually draws from. The Tweedie correction fails outright here, with a
-mean absolute gap of $2.69$, since the empirical Bayes score is estimated from a
-marginal density that is poorly resolved in the same tail. Split-conformal
-recentering by the median calibration residual does not help either, at $0.293$, and a
-$90\%$ conformal lower bound overcorrects to $0.512$ (\cref{tab:sota}).
+\Cref{tab:condmean} reports the outcome over $202$ assays, aggregating within an assay
+first so that the comparison is over independent units. Isotonic regression cuts the
+mean absolute gap from $0.238$ to $0.088$ and the median gap from $0.170$ to $0.054$,
+improving on the reported score for $80\%$ of assays. Linear recalibration is the
+simpler rule and it does help, reaching $0.199$, but isotonic beats it on $75\%$ of
+assays ($p = 10^{-16}$), because a straight line cannot follow a quantile transform
+that flattens in the tail. The binned estimator overshoots in the other direction,
+leaving a median gap of $-0.080$, because equal-count bins place too few points in the
+tail that selection draws from, and the Tweedie correction fails outright, since the
+empirical Bayes score is estimated from a marginal density that is poorly resolved in
+that tail. Cross-fitted and tail-weighted isotonic match plain isotonic, at $0.092$ and
+$0.086$. Split-conformal recentering does not help either, at $0.293$, and a $90\%$
+conformal lower bound overcorrects to $0.512$ (\cref{tab:sota}).
 
 \begin{table}[t]
 \caption{Conditional-mean estimators against the reported score, over $202$ assays.
-The gap is normalized by the achievable gain. Win rate and $p$ compare absolute gaps
-against the reported score by a paired Wilcoxon signed-rank test.}
+The gap is normalized by the achievable gain and summarized across assays. Win rate and
+$p$ compare absolute gaps against the reported score by a paired Wilcoxon signed-rank
+test on assays.}
 \label{tab:condmean}
 \vskip 0.1in
 \begin{center}
@@ -709,10 +709,11 @@ against the reported score by a paired Wilcoxon signed-rank test.}
 \toprule
 rule & median & mean $|\cdot|$ & win & $p$ \\
 \midrule
-reported score & $0.166$ & $0.245$ & n/a & n/a \\
-isotonic       & $0.057$ & $0.100$ & $75.7\%$ & $10^{-120}$ \\
-binned         & $-0.081$ & $0.177$ & $62.3\%$ & $10^{-21}$ \\
-Tweedie        & $-1.270$ & $2.690$ & $1.6\%$ & $10^{-246}$ \\
+reported score & $\phantom{-}0.170$ & $0.238$ & n/a & n/a \\
+linear         & $\phantom{-}0.125$ & $0.199$ & $76\%$ & $10^{-14}$ \\
+binned         & $-0.080$ & $0.171$ & $57\%$ & $10^{-3}$ \\
+Tweedie        & $-0.997$ & $1.905$ & $\phantom{0}1\%$ & $10^{-34}$ \\
+isotonic       & $\phantom{-}0.054$ & $0.088$ & $80\%$ & $10^{-21}$ \\
 \bottomrule
 \end{tabular}
 \end{small}
@@ -721,7 +722,7 @@ Tweedie        & $-1.270$ & $2.690$ & $1.6\%$ & $10^{-246}$ \\
 \end{table}
 
 Tweedie need not be monotone, so it can also reorder candidates; used that way it
-moves realized gain by a median of $-0.637$ and wins in $0.5\%$ of combinations, as
+moves realized gain by a median of $-0.637$ and wins in $0.5\%$ of cells, as
 \cref{cor:monotone} leads one to expect of a rule that perturbs an ordering without
 adding information.
 
@@ -730,11 +731,10 @@ adding information.
 
 Random splits leave the candidates exchangeable with the calibration slice, which is
 the condition \cref{prop:tower} needs. Campaigns extrapolate, so we repeat the
-experiment on four shifted splits of the same assays: positions held out, so that every
-candidate mutates a site with no training measurement; mutant amino acids held out;
-training confined to the lower $60\%$ of the fitness range; and training on single
-substitutions with candidates carrying two or more, the combinatorial design case.
-\Cref{tab:shift} reports the result.
+experiment on four shifted splits: positions held out, so that every candidate mutates
+an unmeasured site; mutant amino acids held out; training confined to the lower $60\%$
+of the fitness range; and training on single substitutions with candidates carrying two
+or more (\cref{tab:shift}).
 
 The gap is largest where design is hardest. Candidates carrying multiple substitutions
 overstate the achievable gain by a median of $0.741$, four times the value under random
@@ -744,27 +744,38 @@ $0.207$ to $0.136$, and winning on $64\%$ of assays in each. The other two split
 behave differently. With amino acids held out the reported score is already close to
 unbiased and recalibration overshoots, raising the median absolute gap to $0.214$. With
 training confined to the lower fitness range the rank accuracy of the surrogate
-collapses to $-0.034$, the forecast underpromises, and every correction makes it worse. The pattern follows \cref{prop:tower} rather than
-contradicting it, since a calibration slice identifies the conditional mean under the
-distribution it is drawn from, which is the distribution the batch comes from in the
-first two splits and not in the last two.
+collapses to $-0.034$, the forecast underpromises, and every correction makes it worse.
+
+\Cref{prop:tower} explains the division. It is the conditional mean under the
+distribution the batch is drawn from that is unbiased, and a calibration slice
+identifies it only when the two agree. Fitting the conditional mean on the candidates
+themselves, using fitness an experimenter would not yet have, removes the gap in every
+split, leaving $0.028$ to $0.103$. Define the calibration drift as the difference
+between the two fits on the selected batch, in units of the assay standard deviation.
+It is $0.02$ under random splits and $0.06$ with positions held out, against $-0.31$,
+$-0.69$ and $0.42$ in the other three, and across all splits its magnitude predicts how
+much recalibration helps, with Spearman correlation $-0.593$ at $p = 10^{-239}$. The
+correction is safe exactly when the calibration slice resembles the candidates, which
+is a condition a team can judge in advance.
 
 \begin{table}[t]
 \caption{Median absolute gap under shifted splits, normalized by the achievable gain,
-over $198$ assays and $56$ for the multiple substitution split. $\rho$ is the median
-held-out rank accuracy.}
+over $198$ assays and $56$ for the multiple substitution split. The oracle fits the
+conditional mean on the candidates themselves. $\rho$ is the median held-out rank
+accuracy and $d$ the calibration drift.}
 \label{tab:shift}
 \vskip 0.1in
 \begin{center}
 \begin{small}
-\begin{tabular}{lrrrr}
+\begin{tabular}{lrrrrrr}
 \toprule
-split & $\rho$ & reported & linear & isotonic \\
+split & $\rho$ & $d$ & reported & linear & isotonic & oracle \\
 \midrule
-positions held out   & $\phantom{-}0.23$ & $0.207$ & $0.161$ & $0.136$ \\
-amino acids held out & $\phantom{-}0.55$ & $0.164$ & $0.185$ & $0.214$ \\
-low fitness only     & $-0.03$ & $0.151$ & $0.157$ & $0.261$ \\
-singles to multiples & $\phantom{-}0.57$ & $1.135$ & $1.119$ & $0.947$ \\
+random               & $\phantom{-}0.67$ & $\phantom{-}0.02$ & $0.163$ & $0.127$ & $0.060$ & $0.036$ \\
+positions held out   & $\phantom{-}0.23$ & $\phantom{-}0.06$ & $0.207$ & $0.161$ & $0.136$ & $0.063$ \\
+amino acids held out & $\phantom{-}0.55$ & $-0.31$ & $0.164$ & $0.185$ & $0.214$ & $0.038$ \\
+low fitness only     & $-0.03$ & $-0.69$ & $0.151$ & $0.157$ & $0.261$ & $0.028$ \\
+singles to multiples & $\phantom{-}0.57$ & $\phantom{-}0.42$ & $1.135$ & $1.119$ & $0.947$ & $0.103$ \\
 \bottomrule
 \end{tabular}
 \end{small}
@@ -778,42 +789,30 @@ singles to multiples & $\phantom{-}0.57$ & $1.135$ & $1.119$ & $0.947$ \\
 If the gap were a weakness of ridge regression, a different surrogate would remove it.
 We refit every split with a random forest, gradient boosting, and nearest neighbors
 (\cref{tab:surrogates}). Ridge, boosting, and nearest neighbors overpromise in $86\%$,
-$99.8\%$, and $90\%$ of combinations. The random forest does not: its median gap is
-$-0.015$ and it overpromises in $17\%$. A forest prediction is an average of training
-responses, which is an estimate of the conditional mean, and \cref{prop:tower} says
-exactly that such a score carries no gap. Rank accuracy does not order the four:
-boosting has the lowest accuracy, $\rho = 0.26$, and the largest gap, $0.455$, while
-the forest sits in the middle at $\rho = 0.50$. A stronger surrogate does not help
-either. Appending a zero-shot protein language model score to the ridge features
-\citep{hsu2022learning}, using the ESM-2 \citep{lin2023evolutionary}, TranceptEVE,
-SaProt, and ProSST scores distributed with ProteinGym, raises $\rho$ from $0.61$ to
-between $0.68$ and $0.69$ and raises the median gap from $0.166$ to between $0.21$ and
-$0.25$. Isotonic recalibration lowers the mean absolute gap of every surrogate, to
-about $0.10$ for ridge and all four augmented models.
+$99.8\%$, and $90\%$ of cells. The random forest does not: its median gap is $-0.015$
+and it overpromises in $17\%$. A forest prediction is an average of training responses,
+which is an estimate of the conditional mean, and \cref{prop:tower} says exactly that
+such a score carries no gap. Rank accuracy does not order the four: boosting has the
+lowest accuracy, $\rho = 0.26$, and the largest gap, $0.455$, while the forest sits in
+the middle at $\rho = 0.50$. Nor does a stronger surrogate help. Appending a zero-shot
+protein language model score to the ridge features \citep{hsu2022learning}, using the
+ESM-2 \citep{lin2023evolutionary}, TranceptEVE, SaProt, and ProSST scores distributed
+with ProteinGym, raises $\rho$ from $0.61$ to between $0.68$ and $0.69$ and raises the
+median gap from $0.166$ to between $0.21$ and $0.25$, while isotonic recalibration
+brings every one of them to about $0.10$.
 
-The closed form can also be confronted with the assays directly. Taking $G_{\!f}$ as
-each assay's empirical quantile function and $\rho_\star$ from the observed $\rho$
-through \cref{lem:rho}, with nothing fitted to the gaps, the model's gap correlates
-with the observed gap at $r = 0.71$ over $1509$ combinations and matches its sign in
-$79\%$; its captured gain correlates at $r = 0.86$. Iterating does not close the gap
-either: over $3$ design rounds, each feeding its measured batch back into training, the
-median gap falls from $0.222$ to $0.150$ while $89\%$ of assays still overpromise.
+Taking $G_{\!f}$ as each assay's empirical quantile function and $\rho_\star$ from the
+observed $\rho$ through \cref{lem:rho}, with nothing fitted to the gaps, the closed
+form correlates with the observed gap at $r = 0.71$ and matches its sign in $79\%$ of
+cells. Iterating does not close it either: over $3$ design rounds, each feeding its
+measured batch back into training, the median gap falls from $0.222$ to $0.150$ while
+$89\%$ of assays still overpromise.
 
-\subsection{The gap is not specific to protein fitness}
-\label{sec:results-domains}
-
-Everything above concerns one benchmark, so we repeated the experiment on four datasets
-from three unrelated fields: superconductor critical temperature, small-molecule
-solubility, two aquatic toxicity endpoints, and antimicrobial peptide activity. The
-pipeline is unchanged; only the features differ, tabulated descriptors for the first
-four and $2$-mer counts for the peptides. Across
-$105$ dataset and budget combinations every domain overpromises, with median gaps from
-$+0.01$ to $+1.28$, the peptides overstating by more than the entire achievable gain.
-Isotonic recalibration cuts the pooled mean absolute gap from $0.385$ to $0.107$ at
-$p = 2 \times 10^{-5}$ and improves four of the five, being worse only on
-superconductors, the set with the highest surrogate accuracy and the smallest
-uncorrected gap. Only the sign of the gap carries across domains, not its ordering by
-$\tau$. \Cref{app:domains} gives the breakdown and the sources.
+The same pattern appears outside protein fitness. Across superconductor critical
+temperature, small-molecule solubility, two aquatic toxicity endpoints, and
+antimicrobial peptide activity, every domain overpromises, and isotonic recalibration
+cuts the pooled mean absolute gap from $0.385$ to $0.107$
+\mbox{(\cref{app:domains})}.
 
 \section{Discussion}
 \label{sec:discussion}
@@ -831,20 +830,20 @@ of what it promises, so budgeting a campaign on the predicted gain overstates pr
 per round by a margin that does not shrink as models improve and that \cref{eq:tau}
 lets a team estimate from pilot measurements.
 
-One feature of the data is not explained by \cref{eq:main} alone. The theory makes the
-gap grow with accuracy for a fixed shape, while \cref{tab:byrho} is nearly flat above
+One feature is not explained by \cref{eq:main} alone. The theory makes the gap grow
+with accuracy for a fixed shape, while \cref{tab:byrho} is nearly flat above
 $\rho = 0.5$, and \cref{sec:results-form} leaves real assays with roughly $0.08$ more
-gap than the model near $\tau = 1$. Fitting the score on limited measurements is the
-natural candidate, since the raw gap falls from $0.363$ to $0.232$ as the training
-fraction rises from $0.1$ to $0.6$ while the theoretical term is unchanged.
+gap near $\tau = 1$. Fitting the score on limited measurements is the natural
+candidate, since the mean absolute gap falls from $0.280$ to $0.214$ as the training
+fraction rises from $0.1$ to $0.6$ while the theoretical term is unchanged
+\mbox{(\cref{app:finite})}.
 
 \section{Conclusion}
 \label{sec:conclusion}
 
-Model-guided design selects candidates at the top of a predicted ranking, and the
-predicted value of that batch overstates what it delivers by an amount set by the shape
-of the fitness distribution and the form of the reported score rather than by the
-accuracy of the model. The gap holds near a quarter of the achievable gain on $217$
+Model-guided design selects at the top of a predicted ranking, and the predicted value
+of that batch overstates what it delivers by an amount set by the shape of the fitness
+distribution and the form of the reported score, not by the accuracy of the model. The gap holds near a quarter of the achievable gain on $217$
 deep mutational scanning assays, persists across surrogate families, acquisition rules,
 and other domains, and is absent only for a surrogate whose output is already an
 average. A statistic of the measured fitness values forecasts it before any
@@ -905,13 +904,50 @@ shape at high accuracy, where $G_{\!f}$ has a sharp transition between the two m
 the Hermite spectrum decays slowly. Increasing the truncation to $k = 12$ reduces the
 discrepancy at $\rho_\star = 0.85$ from $0.026$ to $0.014$.
 
+\subsection{A bound on the finite-sample term}
+\label{app:finite}
+
+\Cref{thm:main} describes a population score. A fitted score carries estimation noise,
+and \cref{sec:discussion} notes that the measured gap exceeds the closed form near
+$\tau = 1$. The following bounds the extra term.
+
+\begin{proposition}[Finite-sample inflation]
+\label{prop:finite}
+Let the reported score be $\yhat + \varepsilon$, where $\yhat$ is the population score
+of \cref{thm:main} and the estimation noise $\varepsilon$ has mean zero, variance
+$\sigma_n^2$, and is drawn independently of the candidate. For any batch $\mathcal{S}$
+of $K$ candidates out of $N$, with $q = K/N$,
+\begin{equation}
+\Exp\!\left[\frac{1}{K}\sum_{i \in \mathcal{S}} \varepsilon_i\right]
+\;\le\;
+\Exp\!\left[\frac{1}{K}\sum_{i=1}^{K} \varepsilon_{(i)}\right]
+\;\longrightarrow\;
+\sigma_n\,\frac{\varphi(z_q)}{q},
+\label{eq:finite}
+\end{equation}
+where $\varepsilon_{(1)} \ge \cdots \ge \varepsilon_{(N)}$ are the order statistics of
+the noise and the limit is as $N \to \infty$ for Gaussian $\varepsilon$.
+\end{proposition}
+
+The proof is immediate. The sum of any $K$ of the $\varepsilon_i$ is at most the sum of
+the $K$ largest, which gives the inequality pointwise and therefore in expectation, and
+the mean of the top $q$ fraction of a Gaussian sample converges to its truncated mean.
+The bound is loose, since it supposes the batch is chosen by the noise alone, but its
+structure is informative: the term scales with $\sigma_n$ and vanishes as the fit
+becomes exact, so it shrinks with training data while the term in \cref{eq:main} does
+not. The mean absolute gap behaves that way, falling from $0.280$ at a training
+fraction of $0.1$ to $0.214$ at $0.6$. We do not attribute the residual quantitatively,
+because estimating $\sigma_n$ by splitting the training set in half is confounded by
+the ridge penalty, which shrinks both halves toward the same constant when data are
+scarce.
+
 \section{Additional Empirical Detail}
 \label{app:empirical}
 
 \subsection{Breakdown by assay type}
 \label{app:class}
 
-\Cref{tab:class} gives the per-class medians summarized in \cref{sec:results-class}.
+\Cref{tab:class} gives the per-class medians summarized in \cref{sec:results-tau}.
 
 \begin{table}[ht]
 \caption{Median tail-compression index, normalized shortfall, and surrogate accuracy by
@@ -938,7 +974,7 @@ binding            & 1.011 & 0.124 & 0.611 \\
 \subsection{Named assays across the tail range}
 \label{app:named}
 
-\Cref{tab:named} lists the assays discussed in \cref{sec:results-class}, ordered by
+\Cref{tab:named} lists the assays discussed in \cref{sec:results-tau}, ordered by
 $\tau$. The gap is normalized by the achievable gain, so a value above one means the
 forecast overstates by more than the entire gain available. Each row is the median over
 training fractions, seeds and budgets for that assay.
@@ -1192,8 +1228,17 @@ Plain isotonic regression is therefore the estimator we recommend.
 \subsection{Datasets outside protein fitness}
 \label{app:domains}
 
+Everything above concerns one benchmark, so we repeated the experiment on five datasets
+from three unrelated fields: superconductor critical temperature, small-molecule
+solubility, two aquatic toxicity endpoints, and antimicrobial peptide activity, with
+the pipeline unchanged and only the features differing. Across $105$ dataset and budget
+combinations every domain overpromises, with median gaps from $+0.01$ to $+1.28$, and
+isotonic recalibration cuts the pooled mean absolute gap from $0.385$ to $0.107$ at
+$p = 2 \times 10^{-5}$, improving four of the five. Only the sign of the gap carries
+across domains, not its ordering by $\tau$ \mbox{(\cref{app:domains})}.
+
 \Cref{tab:domains} reports the four additional datasets of
-\cref{sec:results-domains}, each the median over training fractions, seeds and budgets.
+\cref{app:domains}, each the median over training fractions, seeds and budgets.
 Superconductor critical temperatures come from the UCI superconductivity set, solubility
 from the Delaney set using its six physical descriptors only, with its precomputed
 solubility prediction excluded so that no model output enters the features, the two
